@@ -1,0 +1,28 @@
+{
+  "watch": [
+    "app",
+    "components",
+    "context",
+    "lib",
+    "services",
+    "types",
+    "public",
+    "next.config.js",
+    "tailwind.config.js",
+    "tsconfig.json"
+  ],
+  "ext": "ts,tsx,js,jsx,json,css",
+  "ignore": [
+    "node_modules",
+    ".next",
+    "out",
+    "public/sw.js",
+    "public/workbox-*.js"
+  ],
+  "exec": "next dev",
+  "env": {
+    "NODE_ENV": "development"
+  }
+}
+
+
