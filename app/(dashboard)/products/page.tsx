@@ -7,13 +7,18 @@ import { Header } from '@/components/layout/Header'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Checkbox } from '@/components/ui/checkbox'
 import { SearchBar } from '@/components/common/SearchBar'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { Product } from '@/types'
 import * as productService from '@/services/mock/products'
-import { loadDesignAssets } from '@/services/api/design-assets'
-import { Plus, Edit, Trash2, Upload, Image as ImageIcon, Settings } from 'lucide-react'
+import { loadDesignAssets, getPendingDesignAssets, DesignAsset } from '@/services/api/design-assets'
+import { Plus, Edit, Trash2, Upload, Image as ImageIcon, Settings, Save } from 'lucide-react'
 import { toast } from 'sonner'
+import Image from 'next/image'
 
 export default function ProductsPage() {
   const router = useRouter()
@@ -23,6 +28,9 @@ export default function ProductsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [loadingImages, setLoadingImages] = useState(false)
   const [editDecorationsOpen, setEditDecorationsOpen] = useState(false)
+  const [designAssets, setDesignAssets] = useState<DesignAsset[]>([])
+  const [loadingDesignAssets, setLoadingDesignAssets] = useState(false)
+  const [editingAsset, setEditingAsset] = useState<DesignAsset | null>(null)
 
   useEffect(() => {
     loadProducts()
@@ -86,6 +94,39 @@ export default function ProductsPage() {
     } finally {
       setLoadingImages(false)
       console.log('🟢 handleLoadImages finalizado')
+    }
+  }
+
+  const loadPendingDesignAssets = async () => {
+    setLoadingDesignAssets(true)
+    try {
+      const data = await getPendingDesignAssets()
+      setDesignAssets(data)
+      console.log('✅ Design assets pendientes cargados:', data)
+    } catch (error) {
+      console.error('🔴 Error cargando design assets pendientes:', error)
+      toast.error('Error al cargar las decoraciones pendientes')
+      setDesignAssets([])
+    } finally {
+      setLoadingDesignAssets(false)
+    }
+  }
+
+  const handleSaveAsset = async (asset: DesignAsset, index: number) => {
+    try {
+      // TODO: Implementar guardado en el backend
+      console.log('💾 Guardando asset:', asset)
+      
+      // Actualizar el estado local
+      const updatedAssets = [...designAssets]
+      updatedAssets[index] = asset
+      setDesignAssets(updatedAssets)
+      setEditingAsset(null)
+      
+      toast.success('Decoración guardada exitosamente')
+    } catch (error) {
+      console.error('🔴 Error guardando asset:', error)
+      toast.error('Error al guardar la decoración')
     }
   }
 
@@ -166,15 +207,202 @@ export default function ProductsPage() {
         </div>
 
         {/* Modal de Editar Decoraciones */}
-        <Dialog open={editDecorationsOpen} onOpenChange={setEditDecorationsOpen}>
-          <DialogContent className="w-[calc(100%-2rem)] sm:w-full max-w-lg max-h-[85vh] sm:max-h-[90vh] overflow-y-auto p-4 sm:p-6 top-[50%] sm:top-[50%] left-[50%] sm:left-[50%] translate-x-[-50%] translate-y-[-50%] m-0">
+        <Dialog open={editDecorationsOpen} onOpenChange={(open) => {
+          setEditDecorationsOpen(open)
+          if (open) {
+            loadPendingDesignAssets()
+          } else {
+            setEditingAsset(null)
+          }
+        }}>
+          <DialogContent className="w-[calc(100%-2rem)] sm:w-full max-w-5xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
             <DialogHeader>
               <DialogTitle className="pr-6 sm:pr-0 text-base sm:text-lg">Editar Decoraciones</DialogTitle>
             </DialogHeader>
-            <div className="py-2 sm:py-4">
-              <p className="text-sm text-muted-foreground">
-                Contenido del editor de decoraciones próximamente...
-              </p>
+            <div className="py-4">
+              {loadingDesignAssets ? (
+                <div className="flex justify-center items-center py-8">
+                  <LoadingSpinner size="lg" />
+                </div>
+              ) : designAssets.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  No hay decoraciones pendientes
+                </p>
+              ) : (
+                <div className="space-y-6">
+                  {designAssets.map((asset, index) => {
+                    const assetToEdit: DesignAsset = editingAsset?.id === asset.id && editingAsset ? editingAsset : asset
+                    return (
+                      <Card key={asset.id || index} className="overflow-hidden">
+                        <CardContent className="p-4 sm:p-6">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* Imagen */}
+                            <div className="space-y-4">
+                              <div className="relative w-full aspect-square bg-muted rounded-lg overflow-hidden">
+                                {asset.imageUrl ? (
+                                  <Image
+                                    src={asset.imageUrl}
+                                    alt={asset.description || 'Decoración'}
+                                    fill
+                                    className="object-contain"
+                                    sizes="(max-width: 768px) 100vw, 50vw"
+                                  />
+                                ) : (
+                                  <div className="flex items-center justify-center h-full text-muted-foreground">
+                                    <ImageIcon className="h-12 w-12" />
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Formulario de edición */}
+                            <div className="space-y-4">
+                              <div className="space-y-2">
+                                <Label htmlFor={`description-${index}`}>Descripción</Label>
+                                <Input
+                                  id={`description-${index}`}
+                                  value={assetToEdit.description}
+                                  onChange={(e) => {
+                                    setEditingAsset({ ...assetToEdit, description: e.target.value })
+                                  }}
+                                  placeholder="Descripción de la decoración"
+                                />
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                  <Label htmlFor={`colorPrimary-${index}`}>Color Primario</Label>
+                                  <Select
+                                    value={assetToEdit.colorPrimary}
+                                    onValueChange={(value) => {
+                                      setEditingAsset({ ...assetToEdit, colorPrimary: value })
+                                    }}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="Negro">Negro</SelectItem>
+                                      <SelectItem value="Blanco">Blanco</SelectItem>
+                                      <SelectItem value="Azul">Azul</SelectItem>
+                                      <SelectItem value="Rojo">Rojo</SelectItem>
+                                      <SelectItem value="Verde">Verde</SelectItem>
+                                      <SelectItem value="Gris">Gris</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+
+                                <div className="space-y-2">
+                                  <Label htmlFor={`colorSecondary-${index}`}>Color Secundario</Label>
+                                  <Select
+                                    value={assetToEdit.colorSecondary}
+                                    onValueChange={(value) => {
+                                      setEditingAsset({ ...assetToEdit, colorSecondary: value })
+                                    }}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="Negro">Negro</SelectItem>
+                                      <SelectItem value="Blanco">Blanco</SelectItem>
+                                      <SelectItem value="Azul">Azul</SelectItem>
+                                      <SelectItem value="Rojo">Rojo</SelectItem>
+                                      <SelectItem value="Verde">Verde</SelectItem>
+                                      <SelectItem value="Gris">Gris</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                  <Label htmlFor={`hoodieType-${index}`}>Tipo de Buso</Label>
+                                  <Select
+                                    value={assetToEdit.hoodieType}
+                                    onValueChange={(value) => {
+                                      setEditingAsset({ ...assetToEdit, hoodieType: value })
+                                    }}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="Con Mangas">Con Mangas</SelectItem>
+                                      <SelectItem value="Sin Mangas">Sin Mangas</SelectItem>
+                                      <SelectItem value="Canguro">Canguro</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+
+                                <div className="space-y-2">
+                                  <Label htmlFor={`imageType-${index}`}>Tipo de Imagen</Label>
+                                  <Select
+                                    value={assetToEdit.imageType}
+                                    onValueChange={(value) => {
+                                      setEditingAsset({ ...assetToEdit, imageType: value })
+                                    }}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="PNG">PNG</SelectItem>
+                                      <SelectItem value="JPG">JPG</SelectItem>
+                                      <SelectItem value="SVG">SVG</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </div>
+
+                              <div className="space-y-2">
+                                <Label htmlFor={`decoBase-${index}`}>Base de Decoración</Label>
+                                <Select
+                                  value={assetToEdit.decoBase}
+                                  onValueChange={(value) => {
+                                    setEditingAsset({ ...assetToEdit, decoBase: value })
+                                  }}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="Base 1">Base 1</SelectItem>
+                                    <SelectItem value="Base 2">Base 2</SelectItem>
+                                    <SelectItem value="Base 3">Base 3</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+
+                              <div className="flex items-center space-x-2">
+                                <Checkbox
+                                  id={`hasHighlights-${index}`}
+                                  checked={assetToEdit.hasHighlights}
+                                  onCheckedChange={(checked) => {
+                                    setEditingAsset({ ...assetToEdit, hasHighlights: checked === true })
+                                  }}
+                                />
+                                <Label htmlFor={`hasHighlights-${index}`} className="cursor-pointer">
+                                  Tiene Resaltados
+                                </Label>
+                              </div>
+
+                              <Button
+                                onClick={() => handleSaveAsset(assetToEdit, index)}
+                                className="w-full"
+                                size="sm"
+                              >
+                                <Save className="mr-2 h-4 w-4" />
+                                Guardar Cambios
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           </DialogContent>
         </Dialog>
