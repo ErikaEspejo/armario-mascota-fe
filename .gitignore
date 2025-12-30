@@ -25,11 +25,7 @@ yarn-debug.log*
 yarn-error.log*
 
 # local env files
-.env
 .env*.local
-.env.development
-.env.production
-.env.test
 
 # vercel
 .vercel
@@ -45,26 +41,4 @@ next-env.d.ts
 /public/sw.js.map
 /public/workbox-*.js.map
 /public/worker-*.js.map
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# OS
-Thumbs.db
-.DS_Store
-
-# Logs
-*.log
-logs/
-
-# Secrets and keys
-*.pem
-*.key
-*.crt
-secrets/
-.secrets
 

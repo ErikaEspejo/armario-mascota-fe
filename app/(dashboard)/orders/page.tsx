@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useApp } from '@/context/AppContext'
 import { Header } from '@/components/layout/Header'
@@ -22,7 +22,12 @@ export default function OrdersPage() {
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
   const [orderToCancel, setOrderToCancel] = useState<Order | null>(null)
 
-  const filterOrders = useCallback(async () => {
+  useEffect(() => {
+    filterOrders()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orders, statusFilter])
+
+  const filterOrders = async () => {
     try {
       const filters: { status?: Order['status'] } = {}
       if (statusFilter !== 'all') {
@@ -33,11 +38,7 @@ export default function OrdersPage() {
     } catch (error) {
       console.error('Error filtering orders:', error)
     }
-  }, [statusFilter])
-
-  useEffect(() => {
-    filterOrders()
-  }, [filterOrders, orders])
+  }
 
   const handleSell = (order: Order) => {
     router.push(`/sell?orderId=${order.id}`)

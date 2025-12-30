@@ -19,7 +19,7 @@ import * as catalogService from '@/services/mock/catalogs'
 import { DollarSign } from 'lucide-react'
 import { toast } from 'sonner'
 
-function SellContent() {
+function SellPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { orders, addSale, addCatalog, refreshOrders, refreshSales, refreshCatalogs } = useApp()
@@ -239,7 +239,7 @@ export default function SellPage() {
         </div>
       </div>
     }>
-      <SellContent />
+      <SellPageContent />
     </Suspense>
   )
 }

@@ -14,13 +14,14 @@ import { toast } from 'sonner'
 export default function CatalogsPage() {
   const { catalogs, sales, loading } = useApp()
 
-  const handleDownloadPDF = () => {
+  const handleDownloadPDF = (_catalogId: string, pdfUrl: string) => {
     // Mock download
     toast.success('Descargando PDF...')
     // In real implementation: window.open(pdfUrl, '_blank')
+    console.log('PDF URL:', pdfUrl)
   }
 
-  const handleDownloadPNGs = (_catalogId: string, pngUrls: string[]) => {
+  const handleDownloadPNGs = (catalogId: string, pngUrls: string[]) => {
     // Mock download
     toast.success(`Descargando ${pngUrls.length} imágenes...`)
     // In real implementation: download all PNGs
@@ -89,7 +90,7 @@ export default function CatalogsPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={handleDownloadPDF}
+                        onClick={() => handleDownloadPDF(catalog.id, catalog.pdfUrl)}
                         className="w-full"
                       >
                         <FileDown className="h-4 w-4 mr-2" />

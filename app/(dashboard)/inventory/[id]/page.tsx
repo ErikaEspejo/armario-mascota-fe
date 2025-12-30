@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useCart } from '@/context/CartContext'
 import { Header } from '@/components/layout/Header'
@@ -24,7 +24,12 @@ export default function ProductDetailPage() {
   const [quantity, setQuantity] = useState(1)
   const [loading, setLoading] = useState(true)
 
-  const loadProduct = useCallback(async () => {
+  useEffect(() => {
+    loadProduct()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.id])
+
+  const loadProduct = async () => {
     if (typeof params.id !== 'string') return
     setLoading(true)
     try {
@@ -40,11 +45,7 @@ export default function ProductDetailPage() {
     } finally {
       setLoading(false)
     }
-  }, [params.id])
-
-  useEffect(() => {
-    loadProduct()
-  }, [loadProduct])
+  }
 
   const handleAddToCart = () => {
     if (!product || !selectedVariant) return
@@ -104,22 +105,14 @@ export default function ProductDetailPage() {
       <Header title={product.name} />
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="relative w-full h-96 bg-muted rounded-lg overflow-hidden flex items-center justify-center">
+          <div className="relative w-full h-96 bg-muted rounded-lg overflow-hidden">
             <Image
               src={product.imageUrl}
               alt={product.name}
               fill
               className="object-cover"
               sizes="(max-width: 768px) 100vw, 50vw"
-              unoptimized
-              onError={(e) => {
-                const target = e.target as HTMLImageElement
-                target.style.display = 'none'
-              }}
             />
-            <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5 text-muted-foreground">
-              <span className="text-lg font-medium">{product.name}</span>
-            </div>
           </div>
 
           <div className="space-y-4">

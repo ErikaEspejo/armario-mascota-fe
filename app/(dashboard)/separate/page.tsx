@@ -97,7 +97,6 @@ export default function SeparateOrderPage() {
                         fill
                         className="object-cover"
                         sizes="80px"
-                        unoptimized
                       />
                     </div>
                   )}

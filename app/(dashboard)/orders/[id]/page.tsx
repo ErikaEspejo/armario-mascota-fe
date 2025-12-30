@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useApp } from '@/context/AppContext'
 import { Header } from '@/components/layout/Header'
@@ -24,7 +24,12 @@ export default function OrderDetailPage() {
   const [loading, setLoading] = useState(true)
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
 
-  const loadOrder = useCallback(async () => {
+  useEffect(() => {
+    loadOrder()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.id])
+
+  const loadOrder = async () => {
     if (typeof params.id !== 'string') return
     setLoading(true)
     try {
@@ -35,11 +40,7 @@ export default function OrderDetailPage() {
     } finally {
       setLoading(false)
     }
-  }, [params.id])
-
-  useEffect(() => {
-    loadOrder()
-  }, [loadOrder])
+  }
 
   const handleSell = () => {
     router.push(`/sell?orderId=${order?.id}`)

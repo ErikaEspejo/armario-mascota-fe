@@ -19,23 +19,14 @@ export function ProductCard({ product, onAddToOrder }: ProductCardProps) {
 
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow">
-      <div className="relative w-full h-48 bg-muted flex items-center justify-center">
+      <div className="relative w-full h-48 bg-muted">
         <Image
           src={product.imageUrl}
           alt={product.name}
           fill
           className="object-cover"
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          unoptimized
-          onError={(e) => {
-            // Fallback to placeholder div if image fails
-            const target = e.target as HTMLImageElement
-            target.style.display = 'none'
-          }}
         />
-        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5 text-muted-foreground">
-          <span className="text-sm font-medium">{product.name}</span>
-        </div>
       </div>
       <CardHeader>
         <h3 className="font-semibold text-lg">{product.name}</h3>

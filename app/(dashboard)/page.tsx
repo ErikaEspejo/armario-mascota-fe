@@ -11,6 +11,7 @@ import {
   DollarSign,
   BookOpen,
   Search,
+  Boxes,
 } from 'lucide-react'
 
 export default function HomePage() {
@@ -25,6 +26,13 @@ export default function HomePage() {
   }
 
   const quickActions = [
+    {
+      title: 'Productos',
+      description: 'Gestionar catálogo de productos',
+      icon: Boxes,
+      href: '/products',
+      color: 'bg-indigo-500',
+    },
     {
       title: 'Separar Pedido',
       description: 'Crear un nuevo pedido separado',
@@ -62,10 +70,10 @@ export default function HomePage() {
     },
     {
       title: 'Inventario',
-      description: 'Gestionar productos',
+      description: 'Ver productos disponibles',
       icon: Package,
       href: '/inventory',
-      color: 'bg-indigo-500',
+      color: 'bg-teal-500',
     },
   ]
 

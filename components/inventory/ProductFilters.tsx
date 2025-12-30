@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import {
@@ -27,7 +27,6 @@ export interface FilterState {
 
 export function ProductFilters({ products, onFilterChange }: ProductFiltersProps) {
   const [filters, setFilters] = useState<FilterState>({})
-  const isInitialMount = React.useRef(true)
 
   // Extract unique sizes and colors from products
   const sizes = Array.from(
@@ -39,13 +38,8 @@ export function ProductFilters({ products, onFilterChange }: ProductFiltersProps
   ).sort()
 
   useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false
-      return
-    }
     onFilterChange(filters)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters])
+  }, [filters, onFilterChange])
 
   const updateFilter = (key: keyof FilterState, value: unknown) => {
     setFilters(prev => ({ ...prev, [key]: value }))
@@ -73,14 +67,14 @@ export function ProductFilters({ products, onFilterChange }: ProductFiltersProps
         <div className="space-y-2">
           <Label>Talla</Label>
           <Select
-            value={filters.size || undefined}
-            onValueChange={(value) => updateFilter('size', value === 'all' ? undefined : value)}
+            value={filters.size || ''}
+            onValueChange={(value) => updateFilter('size', value || undefined)}
           >
             <SelectTrigger>
               <SelectValue placeholder="Todas las tallas" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todas las tallas</SelectItem>
+              <SelectItem value="">Todas las tallas</SelectItem>
               {sizes.map((size) => (
                 <SelectItem key={size} value={size}>
                   {size}
@@ -93,14 +87,14 @@ export function ProductFilters({ products, onFilterChange }: ProductFiltersProps
         <div className="space-y-2">
           <Label>Color</Label>
           <Select
-            value={filters.color || undefined}
-            onValueChange={(value) => updateFilter('color', value === 'all' ? undefined : value)}
+            value={filters.color || ''}
+            onValueChange={(value) => updateFilter('color', value || undefined)}
           >
             <SelectTrigger>
               <SelectValue placeholder="Todos los colores" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos los colores</SelectItem>
+              <SelectItem value="">Todos los colores</SelectItem>
               {colors.map((color) => (
                 <SelectItem key={color} value={color}>
                   {color}

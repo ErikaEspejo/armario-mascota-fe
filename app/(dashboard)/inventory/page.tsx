@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect, useState, useCallback, Suspense } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useApp } from '@/context/AppContext'
 import { useCart } from '@/context/CartContext'
 import { Header } from '@/components/layout/Header'
+import { Button } from '@/components/ui/button'
 import { SearchBar } from '@/components/common/SearchBar'
 import { ProductGrid } from '@/components/inventory/ProductGrid'
 import { ProductFilters, FilterState } from '@/components/inventory/ProductFilters'
@@ -12,8 +13,9 @@ import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { Product } from '@/types'
 import * as productService from '@/services/mock/products'
 import { toast } from 'sonner'
+import { Plus } from 'lucide-react'
 
-function InventoryContent() {
+function InventoryPageContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const { products, loading: contextLoading } = useApp()
@@ -21,72 +23,28 @@ function InventoryContent() {
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(false)
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '')
-  const [activeFilters, setActiveFilters] = useState<FilterState>({})
 
-  // Apply filters locally on products
-  const applyFilters = useCallback((productsToFilter: Product[], filters: FilterState): Product[] => {
-    let filtered = [...productsToFilter]
-
-    if (filters.size) {
-      filtered = filtered.filter(p =>
-        p.variants.some(v => v.size === filters.size)
-      )
-    }
-
-    if (filters.color) {
-      filtered = filtered.filter(p =>
-        p.variants.some(v => v.color.toLowerCase() === filters.color?.toLowerCase())
-      )
-    }
-
-    if (filters.onlyAvailable) {
-      filtered = filtered.filter(p => {
-        return p.variants.some(v => v.stockTotal - v.stockReserved > 0)
-      })
-    }
-
-    if (filters.lowStock) {
-      filtered = filtered.filter(p => {
-        return p.variants.some(v => v.stockTotal - v.stockReserved <= 5)
-      })
-    }
-
-    return filtered
-  }, [])
-
-  // Load and filter products when dependencies change
   useEffect(() => {
-    if (contextLoading) return
+    loadProducts()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery])
 
-    const loadAndFilter = async () => {
-      setLoading(true)
-      try {
-        // First, get base products (search or all)
-        let baseProducts: Product[]
-        if (searchQuery.trim()) {
-          baseProducts = await productService.searchProducts(searchQuery)
-        } else {
-          baseProducts = products.length > 0 ? products : await productService.getProducts()
-        }
-
-        // Then apply filters locally
-        const hasFilters = Object.values(activeFilters).some(v => v !== undefined && v !== false)
-        if (hasFilters) {
-          const filtered = applyFilters(baseProducts, activeFilters)
-          setFilteredProducts(filtered)
-        } else {
-          setFilteredProducts(baseProducts)
-        }
-      } catch (error) {
-        console.error('Error loading products:', error)
-        toast.error('Error al cargar productos')
-      } finally {
-        setLoading(false)
+  const loadProducts = async () => {
+    setLoading(true)
+    try {
+      let result: Product[]
+      if (searchQuery.trim()) {
+        result = await productService.searchProducts(searchQuery)
+      } else {
+        result = await productService.getProducts()
       }
+      setFilteredProducts(result)
+    } catch (error) {
+      console.error('Error loading products:', error)
+    } finally {
+      setLoading(false)
     }
-
-    loadAndFilter()
-  }, [searchQuery, contextLoading, products, activeFilters, applyFilters])
+  }
 
   const handleSearch = (query: string) => {
     setSearchQuery(query)
@@ -99,9 +57,30 @@ function InventoryContent() {
     router.push(`/inventory?${params.toString()}`)
   }
 
-  const handleFilterChange = useCallback((filters: FilterState) => {
-    setActiveFilters(filters)
-  }, [])
+  const handleFilterChange = async (filters: FilterState) => {
+    setLoading(true)
+    try {
+      const result = await productService.filterProducts(filters)
+      let filtered = result
+
+      // Apply search query if exists
+      if (searchQuery.trim()) {
+        const lowerQuery = searchQuery.toLowerCase()
+        filtered = filtered.filter(
+          p =>
+            p.name.toLowerCase().includes(lowerQuery) ||
+            p.sku.toLowerCase().includes(lowerQuery) ||
+            p.subtitle.toLowerCase().includes(lowerQuery)
+        )
+      }
+
+      setFilteredProducts(filtered)
+    } catch (error) {
+      console.error('Error filtering products:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleAddToOrder = (product: Product) => {
     // Add first available variant to cart
@@ -146,10 +125,28 @@ function InventoryContent() {
       <Header title="Inventario" showSearch />
       <div className="space-y-6">
         <div className="hidden md:block">
-          <h1 className="text-3xl font-bold mb-2">Inventario</h1>
-          <p className="text-muted-foreground mb-6">
-            Gestiona tus productos y stock
-          </p>
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h1 className="text-3xl font-bold mb-2">Inventario</h1>
+              <p className="text-muted-foreground">
+                Gestiona tus productos y stock
+              </p>
+            </div>
+            <Button onClick={() => router.push('/admin/products/create')}>
+              <Plus className="mr-2 h-4 w-4" />
+              Crear Producto
+            </Button>
+          </div>
+        </div>
+
+        <div className="md:hidden mb-4">
+          <Button 
+            onClick={() => router.push('/admin/products/create')}
+            className="w-full"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Crear Producto
+          </Button>
         </div>
 
         <SearchBar
@@ -182,7 +179,7 @@ export default function InventoryPage() {
         </div>
       </div>
     }>
-      <InventoryContent />
+      <InventoryPageContent />
     </Suspense>
   )
 }

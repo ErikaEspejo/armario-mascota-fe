@@ -9,11 +9,13 @@ import {
   FileText,
   DollarSign,
   BookOpen,
+  Boxes,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navItems = [
   { href: '/', label: 'Inicio', icon: Home },
+  { href: '/products', label: 'Productos', icon: Boxes },
   { href: '/inventory', label: 'Inventario', icon: Package },
   { href: '/separate', label: 'Separar Pedido', icon: ShoppingCart },
   { href: '/orders', label: 'Pedidos', icon: FileText },

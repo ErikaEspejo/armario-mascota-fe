@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useApp } from '@/context/AppContext'
 import { Header } from '@/components/layout/Header'
@@ -23,7 +23,12 @@ export default function SalesPage() {
   const [dateTo, setDateTo] = useState('')
   const [customerName, setCustomerName] = useState('')
 
-  const filterSales = useCallback(async () => {
+  useEffect(() => {
+    filterSales()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sales, dateFrom, dateTo, customerName])
+
+  const filterSales = async () => {
     try {
       const filters: { dateFrom?: string; dateTo?: string; customerName?: string } = {}
       if (dateFrom) filters.dateFrom = dateFrom
@@ -35,11 +40,7 @@ export default function SalesPage() {
     } catch (error) {
       console.error('Error filtering sales:', error)
     }
-  }, [dateFrom, dateTo, customerName])
-
-  useEffect(() => {
-    filterSales()
-  }, [filterSales, sales])
+  }
 
   const paymentMethodLabels = {
     cash: 'Efectivo',
