@@ -8,6 +8,7 @@ export interface DesignAsset {
   decoBase: string
   hasHighlights: boolean
   imageUrl: string
+  optimizedImageUrl?: string
 }
 
 /**

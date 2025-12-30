@@ -13,12 +13,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox'
 import { SearchBar } from '@/components/common/SearchBar'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
+import { LazyImage } from '@/components/common/LazyImage'
+import { BACKEND_BASE_URL } from '@/lib/constants'
 import { Product } from '@/types'
 import * as productService from '@/services/mock/products'
 import { loadDesignAssets, getPendingDesignAssets, DesignAsset } from '@/services/api/design-assets'
 import { Plus, Edit, Trash2, Upload, Image as ImageIcon, Settings, Save } from 'lucide-react'
 import { toast } from 'sonner'
-import Image from 'next/image'
 
 export default function ProductsPage() {
   const router = useRouter()
@@ -98,17 +99,24 @@ export default function ProductsPage() {
   }
 
   const loadPendingDesignAssets = async () => {
+    console.log('🟡 Iniciando carga de design assets pendientes...')
     setLoadingDesignAssets(true)
     try {
+      console.log('🟡 Llamando a getPendingDesignAssets...')
       const data = await getPendingDesignAssets()
+      console.log('✅ Design assets pendientes recibidos:', data)
       setDesignAssets(data)
-      console.log('✅ Design assets pendientes cargados:', data)
     } catch (error) {
       console.error('🔴 Error cargando design assets pendientes:', error)
-      toast.error('Error al cargar las decoraciones pendientes')
+      let errorMessage = 'Error al cargar las decoraciones pendientes'
+      if (error instanceof Error) {
+        errorMessage = error.message
+      }
+      toast.error(errorMessage)
       setDesignAssets([])
     } finally {
       setLoadingDesignAssets(false)
+      console.log('🟢 loadPendingDesignAssets finalizado')
     }
   }
 
@@ -195,7 +203,11 @@ export default function ProductsPage() {
               {loadingImages ? 'Cargando...' : 'Cargar Imágenes'}
             </Button>
             <Button
-              onClick={() => setEditDecorationsOpen(true)}
+              onClick={() => {
+                console.log('🟢 Botón "Editar Decoraciones" clickeado')
+                setEditDecorationsOpen(true)
+                loadPendingDesignAssets()
+              }}
               variant="outline"
               size="sm"
               className="w-full sm:w-auto"
@@ -238,20 +250,36 @@ export default function ProductsPage() {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {/* Imagen */}
                             <div className="space-y-4">
-                              <div className="relative w-full aspect-square bg-muted rounded-lg overflow-hidden">
-                                {asset.imageUrl ? (
-                                  <Image
-                                    src={asset.imageUrl}
-                                    alt={asset.description || 'Decoración'}
-                                    fill
-                                    className="object-contain"
-                                    sizes="(max-width: 768px) 100vw, 50vw"
-                                  />
-                                ) : (
-                                  <div className="flex items-center justify-center h-full text-muted-foreground">
-                                    <ImageIcon className="h-12 w-12" />
-                                  </div>
-                                )}
+                              <div className="relative w-full aspect-square bg-muted rounded-lg overflow-hidden flex items-center justify-center">
+                                {(() => {
+                                  // Usar optimizedImageUrl si está disponible, sino fallback a imageUrl
+                                  const imagePath = asset.optimizedImageUrl || asset.imageUrl
+                                  if (!imagePath) {
+                                    return (
+                                      <div className="flex items-center justify-center h-full text-muted-foreground">
+                                        <ImageIcon className="h-12 w-12" />
+                                      </div>
+                                    )
+                                  }
+                                  
+                                  // Construir URL completa: si optimizedImageUrl es relativo, agregar base URL
+                                  // Si imageUrl ya es completa (http/https), usarla directamente
+                                  const fullUrl = asset.optimizedImageUrl
+                                    ? imagePath.startsWith('http') 
+                                      ? imagePath 
+                                      : `${BACKEND_BASE_URL}${imagePath}`
+                                    : imagePath
+                                  
+                                  return (
+                                    <LazyImage
+                                      src={fullUrl}
+                                      alt={asset.description || 'Decoración'}
+                                      className="max-w-full max-h-full w-full h-full object-contain"
+                                      placeholderClassName="w-full h-full"
+                                      errorPlaceholderClassName="w-full h-full"
+                                    />
+                                  )
+                                })()}
                               </div>
                             </div>
 
