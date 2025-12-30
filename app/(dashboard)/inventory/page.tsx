@@ -5,7 +5,6 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { useApp } from '@/context/AppContext'
 import { useCart } from '@/context/CartContext'
 import { Header } from '@/components/layout/Header'
-import { Button } from '@/components/ui/button'
 import { SearchBar } from '@/components/common/SearchBar'
 import { ProductGrid } from '@/components/inventory/ProductGrid'
 import { ProductFilters, FilterState } from '@/components/inventory/ProductFilters'
@@ -13,7 +12,6 @@ import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { Product } from '@/types'
 import * as productService from '@/services/mock/products'
 import { toast } from 'sonner'
-import { Plus } from 'lucide-react'
 
 function InventoryPageContent() {
   const searchParams = useSearchParams()
@@ -26,7 +24,6 @@ function InventoryPageContent() {
 
   useEffect(() => {
     loadProducts()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery])
 
   const loadProducts = async () => {
@@ -125,28 +122,10 @@ function InventoryPageContent() {
       <Header title="Inventario" showSearch />
       <div className="space-y-6">
         <div className="hidden md:block">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-3xl font-bold mb-2">Inventario</h1>
-              <p className="text-muted-foreground">
-                Gestiona tus productos y stock
-              </p>
-            </div>
-            <Button onClick={() => router.push('/admin/products/create')}>
-              <Plus className="mr-2 h-4 w-4" />
-              Crear Producto
-            </Button>
-          </div>
-        </div>
-
-        <div className="md:hidden mb-4">
-          <Button 
-            onClick={() => router.push('/admin/products/create')}
-            className="w-full"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Crear Producto
-          </Button>
+          <h1 className="text-3xl font-bold mb-2">Inventario</h1>
+          <p className="text-muted-foreground mb-6">
+            Gestiona tus productos y stock
+          </p>
         </div>
 
         <SearchBar

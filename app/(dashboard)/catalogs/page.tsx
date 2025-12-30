@@ -15,10 +15,12 @@ export default function CatalogsPage() {
   const { catalogs, sales, loading } = useApp()
 
   const handleDownloadPDF = (_catalogId: string, pdfUrl: string) => {
-    // Mock download
+    // Mock download - pdfUrl will be used when implementing real download
     toast.success('Descargando PDF...')
     // In real implementation: window.open(pdfUrl, '_blank')
-    console.log('PDF URL:', pdfUrl)
+    if (pdfUrl) {
+      console.log('PDF URL:', pdfUrl)
+    }
   }
 
   const handleDownloadPNGs = (catalogId: string, pngUrls: string[]) => {

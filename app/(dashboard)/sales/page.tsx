@@ -25,7 +25,6 @@ export default function SalesPage() {
 
   useEffect(() => {
     filterSales()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sales, dateFrom, dateTo, customerName])
 
   const filterSales = async () => {
