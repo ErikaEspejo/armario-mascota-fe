@@ -9,11 +9,13 @@ import * as SelectPrimitive from '@radix-ui/react-select'
 
 interface ComboboxProps {
   value?: string
-  onValueChange: (value: string) => void
+  onValueChange: (value: string | undefined) => void
   options: readonly string[]
   placeholder?: string
   searchPlaceholder?: string
   emptyMessage?: string
+  allowClear?: boolean
+  clearLabel?: string
 }
 
 export function Combobox({
@@ -23,6 +25,8 @@ export function Combobox({
   placeholder = 'Seleccione una opción',
   searchPlaceholder = 'Buscar...',
   emptyMessage = 'No se encontraron resultados',
+  allowClear = false,
+  clearLabel = 'Todos',
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
   const [searchQuery, setSearchQuery] = React.useState('')
@@ -34,11 +38,22 @@ export function Combobox({
   }, [options, searchQuery])
 
   const selectedOption = options.find(opt => opt === value)
+  
+  // Valor especial para limpiar selección
+  const CLEAR_VALUE = '__CLEAR__'
+
+  const handleValueChange = (newValue: string) => {
+    if (newValue === CLEAR_VALUE) {
+      onValueChange(undefined)
+    } else {
+      onValueChange(newValue)
+    }
+  }
 
   return (
     <SelectPrimitive.Root
-      value={value}
-      onValueChange={onValueChange}
+      value={value ? value : undefined}
+      onValueChange={handleValueChange}
       open={open}
       onOpenChange={(isOpen) => {
         setOpen(isOpen)
@@ -98,6 +113,22 @@ export function Combobox({
             </div>
           </div>
           <SelectPrimitive.Viewport className="p-1">
+            {allowClear && (
+              <SelectPrimitive.Item
+                value={CLEAR_VALUE}
+                className={cn(
+                  'relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none focus:bg-accent focus:text-accent-foreground',
+                  !value && 'bg-accent'
+                )}
+              >
+                <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+                  <SelectPrimitive.ItemIndicator>
+                    <Check className="h-4 w-4" />
+                  </SelectPrimitive.ItemIndicator>
+                </span>
+                <SelectPrimitive.ItemText>{clearLabel}</SelectPrimitive.ItemText>
+              </SelectPrimitive.Item>
+            )}
             {filteredOptions.length === 0 ? (
               <div className="py-6 text-center text-sm text-muted-foreground">
                 {emptyMessage}

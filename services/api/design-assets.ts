@@ -1,5 +1,6 @@
 export interface DesignAsset {
   id?: string
+  code?: string
   description: string
   colorPrimary: string
   colorSecondary: string
@@ -104,6 +105,114 @@ export async function getPendingDesignAssets(): Promise<DesignAsset[]> {
 }
 
 /**
+ * Filters design assets based on provided filters via Next.js API route (proxy)
+ * @param filters Object containing optional filter parameters
+ * @returns Promise with the filtered design assets array
+ */
+export interface DesignAssetFilters {
+  colorPrimary?: string
+  colorSecondary?: string
+  hoodieType?: string
+  imageType?: string
+  decoBase?: string
+}
+
+export async function filterDesignAssets(filters: DesignAssetFilters): Promise<DesignAsset[]> {
+  const url = '/api/design-assets/filter'
+  
+  console.log('🔵 Filtrando design assets desde API route:', url)
+  console.log('🔵 Filtros aplicados:', filters)
+  
+  try {
+    // Construir query params
+    const params = new URLSearchParams()
+    if (filters.colorPrimary) params.append('colorPrimary', filters.colorPrimary)
+    if (filters.colorSecondary) params.append('colorSecondary', filters.colorSecondary)
+    if (filters.hoodieType) params.append('hoodieType', filters.hoodieType)
+    if (filters.imageType) params.append('imageType', filters.imageType)
+    if (filters.decoBase) params.append('decoBase', filters.decoBase)
+    
+    const queryString = params.toString()
+    const fullUrl = queryString ? `${url}?${queryString}` : url
+    
+    const response = await fetch(fullUrl, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+      console.error('🔴 Error en respuesta:', errorData)
+      throw new Error(errorData.error || `Error filtering design assets: ${response.status} ${response.statusText}`)
+    }
+
+    const data = await response.json()
+    console.log('✅ Design assets filtrados recibidos:', data)
+    // Si la respuesta es un array, retornarlo directamente, si es un objeto con un array, extraerlo
+    return Array.isArray(data) ? data : (data.items || data.data || [])
+  } catch (error) {
+    console.error('🔴 Error completo al filtrar design assets:', error)
+    
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      throw new Error('No se pudo conectar con el servidor. Verifica que el servidor esté corriendo')
+    }
+    
+    if (error instanceof Error) {
+      throw error
+    }
+    
+    throw new Error('Error desconocido al filtrar los diseños')
+  }
+}
+
+/**
+ * Gets a single design asset by ID from the admin endpoint via Next.js API route (proxy)
+ * @param id The design asset ID
+ * @returns Promise with the design asset
+ */
+export async function getDesignAssetById(id: string): Promise<DesignAsset | null> {
+  const url = `/api/design-assets/${id}`
+  
+  console.log('🔵 Obteniendo design asset por ID desde API route:', url)
+  
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        return null
+      }
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+      console.error('🔴 Error en respuesta:', errorData)
+      throw new Error(errorData.error || `Error loading design asset: ${response.status} ${response.statusText}`)
+    }
+
+    const data = await response.json()
+    console.log('✅ Design asset recibido:', data)
+    return data
+  } catch (error) {
+    console.error('🔴 Error completo al obtener design asset:', error)
+    
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      throw new Error('No se pudo conectar con el servidor. Verifica que el servidor esté corriendo')
+    }
+    
+    if (error instanceof Error) {
+      throw error
+    }
+    
+    throw new Error('Error desconocido al obtener el diseño')
+  }
+}
+
+/**
  * Saves a design asset to the backend via Next.js API route (proxy)
  * @param asset The design asset to save
  * @returns Promise that resolves when the asset is saved successfully
@@ -120,12 +229,16 @@ export async function saveDesignAsset(asset: DesignAsset): Promise<void> {
       id: asset.id ? String(asset.id) : undefined,
     }
     
+    const body = JSON.stringify(assetToSend)
+    console.log('🔵 [Client] Request body:', body)
+    console.log('🔵 [Client] Request body (parsed):', assetToSend)
+    
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(assetToSend),
+      body,
     })
 
     if (!response.ok) {

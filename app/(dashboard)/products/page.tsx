@@ -1,76 +1,59 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { useApp } from '@/context/AppContext'
+import { useState } from 'react'
 import { Header } from '@/components/layout/Header'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Combobox } from '@/components/ui/combobox'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
-import { SearchBar } from '@/components/common/SearchBar'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { LazyImage } from '@/components/common/LazyImage'
 import { BACKEND_BASE_URL } from '@/lib/constants'
-import { Product } from '@/types'
-import * as productService from '@/services/mock/products'
-import { loadDesignAssets, getPendingDesignAssets, saveDesignAsset, DesignAsset } from '@/services/api/design-assets'
-import { DECORATION_COLORS, BUSO_TYPES, IMAGE_TYPES, DECO_BASE_OPTIONS } from '@/lib/decoration-constants'
-import { Plus, Edit, Trash2, Upload, Image as ImageIcon, Settings, Save, CheckCircle2 } from 'lucide-react'
+import { 
+  loadDesignAssets, 
+  getPendingDesignAssets,
+  saveDesignAsset, 
+  filterDesignAssets,
+  getDesignAssetById,
+  DesignAsset,
+  DesignAssetFilters
+} from '@/services/api/design-assets'
+import { 
+  DECORATION_COLORS, 
+  BUSO_TYPES, 
+  IMAGE_TYPES, 
+  DECO_BASE_OPTIONS,
+  getAvailableSizes,
+  mapColorFromAPI,
+  mapHoodieTypeFromAPI,
+  mapImageTypeFromAPI,
+  mapDecoBaseFromAPI
+} from '@/lib/decoration-constants'
+import { Upload, Image as ImageIcon, Settings, Save, CheckCircle2, Pencil } from 'lucide-react'
 import { toast } from 'sonner'
 
 export default function ProductsPage() {
-  const router = useRouter()
-  const { products, loading: contextLoading } = useApp()
-  const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
-  const [loading, setLoading] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
   const [loadingImages, setLoadingImages] = useState(false)
   const [editDecorationsOpen, setEditDecorationsOpen] = useState(false)
-  const [designAssets, setDesignAssets] = useState<DesignAsset[]>([])
-  const [loadingDesignAssets, setLoadingDesignAssets] = useState(false)
   const [editingAsset, setEditingAsset] = useState<DesignAsset | null>(null)
+  const [loadingDesignAsset, setLoadingDesignAsset] = useState(false)
   const [savedAssets, setSavedAssets] = useState<Set<string>>(new Set())
-
-  useEffect(() => {
-    loadProducts()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery, products])
-
-  const loadProducts = async () => {
-    setLoading(true)
-    try {
-      let result: Product[]
-      if (searchQuery.trim()) {
-        result = await productService.searchProducts(searchQuery)
-      } else {
-        result = products.length > 0 ? products : await productService.getProducts()
-      }
-      setFilteredProducts(result)
-    } catch (error) {
-      console.error('Error loading products:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleSearch = (query: string) => {
-    setSearchQuery(query)
-  }
-
-  const handleEdit = (product: Product) => {
-    // TODO: Implementar edición de producto
-    toast.info(`Edición de ${product.name} próximamente`)
-    // router.push(`/admin/products/${product.id}/edit`)
-  }
-
-  const handleDelete = async (product: Product) => {
-    // TODO: Implementar eliminación de producto
-    toast.info(`Eliminación de ${product.name} próximamente`)
-  }
+  const [allPendingAssets, setAllPendingAssets] = useState<DesignAsset[]>([])
+  const [loadingPendingAssets, setLoadingPendingAssets] = useState(false)
+  const [showAllPending, setShowAllPending] = useState(false)
+  
+  // Filtros
+  const [filters, setFilters] = useState<DesignAssetFilters>({})
+  const [filteredDesignAssets, setFilteredDesignAssets] = useState<DesignAsset[]>([])
+  const [loadingFilters, setLoadingFilters] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  
+  // Asignaciones por card
+  const [assignments, setAssignments] = useState<Record<string, { size: string; quantity: number }>>({})
 
   const handleLoadImages = async () => {
     setLoadingImages(true)
@@ -81,16 +64,12 @@ export default function ProductsPage() {
       const data = await loadDesignAssets()
       console.log('✅ loadDesignAssets completado exitosamente:', data)
       toast.success('Imágenes cargadas exitosamente')
-      // Aquí puedes procesar los datos recibidos según la estructura de la respuesta
     } catch (error) {
       console.error('🔴 Error en handleLoadImages:', error)
-      
-      // Mostrar mensaje de error más descriptivo
       let errorMessage = 'Error al cargar las imágenes'
       if (error instanceof Error) {
         errorMessage = error.message
       }
-      
       toast.error(errorMessage, {
         duration: 5000,
       })
@@ -100,19 +79,79 @@ export default function ProductsPage() {
     }
   }
 
+  const handleFilterDesigns = async () => {
+    setLoadingFilters(true)
+    try {
+      console.log('🔵 Aplicando filtros:', filters)
+      const data = await filterDesignAssets(filters)
+      console.log('✅ Diseños filtrados recibidos:', data)
+      // Mapear valores de la API a las constantes para que coincidan con los dropdowns
+      const assetsWithDefaults = data.map(asset => {
+        const mappedColorPrimary = mapColorFromAPI(asset.colorPrimary || '')
+        const mappedColorSecondary = mapColorFromAPI(asset.colorSecondary || '') || mappedColorPrimary
+        
+        return {
+          ...asset,
+          colorPrimary: mappedColorPrimary,
+          colorSecondary: mappedColorSecondary,
+          hoodieType: mapHoodieTypeFromAPI(asset.hoodieType || ''),
+          imageType: mapImageTypeFromAPI(asset.imageType || ''),
+          decoBase: mapDecoBaseFromAPI(asset.decoBase || ''),
+        }
+      })
+      setFilteredDesignAssets(assetsWithDefaults)
+      toast.success(`${assetsWithDefaults.length} diseño(s) encontrado(s)`)
+    } catch (error) {
+      console.error('🔴 Error filtrando diseños:', error)
+      let errorMessage = 'Error al filtrar los diseños'
+      if (error instanceof Error) {
+        errorMessage = error.message
+      }
+      toast.error(errorMessage)
+      setFilteredDesignAssets([])
+    } finally {
+      setLoadingFilters(false)
+    }
+  }
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query)
+  }
+
+  // Filtrar diseños por búsqueda en tiempo real
+  const searchFilteredAssets = filteredDesignAssets.filter(asset => {
+    if (!searchQuery.trim()) return true
+    const query = searchQuery.toLowerCase()
+    return (
+      asset.code?.toLowerCase().includes(query) ||
+      asset.description?.toLowerCase().includes(query) ||
+      (asset.id ? String(asset.id).toLowerCase().includes(query) : false)
+    )
+  })
+
   const loadPendingDesignAssets = async () => {
     console.log('🟡 Iniciando carga de design assets pendientes...')
-    setLoadingDesignAssets(true)
+    setLoadingPendingAssets(true)
     try {
       console.log('🟡 Llamando a getPendingDesignAssets...')
       const data = await getPendingDesignAssets()
       console.log('✅ Design assets pendientes recibidos:', data)
-      // Establecer "N/A" como valor por defecto para decoBase si está vacío
-      const assetsWithDefaults = data.map(asset => ({
-        ...asset,
-        decoBase: asset.decoBase && asset.decoBase.trim() ? asset.decoBase : 'N/A',
-      }))
-      setDesignAssets(assetsWithDefaults)
+      // Mapear valores de la API a las constantes para que coincidan con los dropdowns
+      const assetsWithDefaults = data.map(asset => {
+        const mappedColorPrimary = mapColorFromAPI(asset.colorPrimary || '')
+        const mappedColorSecondary = mapColorFromAPI(asset.colorSecondary || '') || mappedColorPrimary
+        
+        return {
+          ...asset,
+          colorPrimary: mappedColorPrimary,
+          colorSecondary: mappedColorSecondary,
+          hoodieType: mapHoodieTypeFromAPI(asset.hoodieType || ''),
+          imageType: mapImageTypeFromAPI(asset.imageType || ''),
+          decoBase: mapDecoBaseFromAPI(asset.decoBase || ''),
+        }
+      })
+      setAllPendingAssets(assetsWithDefaults)
+      setShowAllPending(true)
     } catch (error) {
       console.error('🔴 Error cargando design assets pendientes:', error)
       let errorMessage = 'Error al cargar las decoraciones pendientes'
@@ -120,14 +159,78 @@ export default function ProductsPage() {
         errorMessage = error.message
       }
       toast.error(errorMessage)
-      setDesignAssets([])
+      setAllPendingAssets([])
     } finally {
-      setLoadingDesignAssets(false)
+      setLoadingPendingAssets(false)
       console.log('🟢 loadPendingDesignAssets finalizado')
     }
   }
 
-  const handleSaveAsset = async (asset: DesignAsset, index: number) => {
+  const loadDesignAssetForEdit = async (id: string) => {
+    setShowAllPending(false)
+    
+    // Primero buscar en los diseños filtrados (estado local)
+    const localAsset = filteredDesignAssets.find(asset => asset.id === id)
+    
+    if (localAsset) {
+      // Usar la información que ya tenemos y mapear valores de la API a las constantes
+      const mappedColorPrimary = mapColorFromAPI(localAsset.colorPrimary || '')
+      const mappedColorSecondary = mapColorFromAPI(localAsset.colorSecondary || '') || mappedColorPrimary
+      
+      const assetWithDefaults: DesignAsset = {
+        ...localAsset,
+        description: localAsset.description || '',
+        colorPrimary: mappedColorPrimary,
+        colorSecondary: mappedColorSecondary,
+        hoodieType: mapHoodieTypeFromAPI(localAsset.hoodieType || ''),
+        imageType: mapImageTypeFromAPI(localAsset.imageType || ''),
+        decoBase: mapDecoBaseFromAPI(localAsset.decoBase || ''),
+        hasHighlights: localAsset.hasHighlights ?? false,
+        imageUrl: localAsset.imageUrl || '',
+      }
+      setEditingAsset(assetWithDefaults)
+      setEditDecorationsOpen(true)
+      return
+    }
+    
+    // Si no está en el estado local, hacer llamada a la API
+    setLoadingDesignAsset(true)
+    try {
+      const asset = await getDesignAssetById(id)
+      if (asset) {
+        // Mapear valores de la API a las constantes para que coincidan con los dropdowns
+        const mappedColorPrimary = mapColorFromAPI(asset.colorPrimary || '')
+        const mappedColorSecondary = mapColorFromAPI(asset.colorSecondary || '') || mappedColorPrimary
+        
+        const assetWithDefaults: DesignAsset = {
+          ...asset,
+          description: asset.description || '',
+          colorPrimary: mappedColorPrimary,
+          colorSecondary: mappedColorSecondary,
+          hoodieType: mapHoodieTypeFromAPI(asset.hoodieType || ''),
+          imageType: mapImageTypeFromAPI(asset.imageType || ''),
+          decoBase: mapDecoBaseFromAPI(asset.decoBase || ''),
+          hasHighlights: asset.hasHighlights ?? false,
+          imageUrl: asset.imageUrl || '',
+        }
+        setEditingAsset(assetWithDefaults)
+        setEditDecorationsOpen(true)
+      } else {
+        toast.error('No se encontró el diseño')
+      }
+    } catch (error) {
+      console.error('🔴 Error cargando design asset:', error)
+      let errorMessage = 'Error al cargar el diseño'
+      if (error instanceof Error) {
+        errorMessage = error.message
+      }
+      toast.error(errorMessage)
+    } finally {
+      setLoadingDesignAsset(false)
+    }
+  }
+
+  const handleSaveAsset = async (asset: DesignAsset) => {
     try {
       console.log('💾 Guardando asset:', asset)
       
@@ -173,11 +276,20 @@ export default function ProductsPage() {
         setSavedAssets(prev => new Set(prev).add(assetToSave.id!))
       }
       
-      // Actualizar el estado local con el asset guardado (incluyendo colorSecondary asignado)
-      const updatedAssets = [...designAssets]
-      updatedAssets[index] = assetToSave
-      setDesignAssets(updatedAssets)
+      // Actualizar el asset en la lista filtrada si existe
+      setFilteredDesignAssets(prev => 
+        prev.map(a => a.id === assetToSave.id ? assetToSave : a)
+      )
+      
+      // Actualizar también en la lista de pendientes si existe
+      setAllPendingAssets(prev => 
+        prev.map(a => a.id === assetToSave.id ? assetToSave : a)
+      )
+      
       setEditingAsset(null)
+      if (!showAllPending) {
+        setEditDecorationsOpen(false)
+      }
       
       toast.success('Decoración guardada exitosamente')
     } catch (error) {
@@ -190,54 +302,65 @@ export default function ProductsPage() {
     }
   }
 
-  if (contextLoading || loading) {
-    return (
-      <div>
-        <Header title="Productos" />
-        <div className="flex justify-center items-center min-h-[400px]">
-          <LoadingSpinner size="lg" />
-        </div>
-      </div>
-    )
+  const handleAssign = async (assetId: string) => {
+    const assignment = assignments[assetId]
+    if (!assignment) {
+      toast.error('Por favor selecciona una talla y cantidad')
+      return
+    }
+    
+    if (!assignment.size) {
+      toast.error('Por favor selecciona una talla')
+      return
+    }
+    
+    if (!assignment.quantity || assignment.quantity <= 0) {
+      toast.error('Por favor ingresa una cantidad válida')
+      return
+    }
+    
+    try {
+      // TODO: Llamar a API para guardar asignación cuando se proporcione el endpoint
+      console.log('💾 Asignando:', { assetId, ...assignment })
+      toast.success(`Asignación guardada: ${assignment.quantity} unidades en talla ${assignment.size}`)
+      
+      // Limpiar asignación después de guardar
+      setAssignments(prev => {
+        const newAssignments = { ...prev }
+        delete newAssignments[assetId]
+        return newAssignments
+      })
+    } catch (error) {
+      console.error('🔴 Error asignando:', error)
+      toast.error('Error al guardar la asignación')
+    }
+  }
+
+  const updateAssignment = (assetId: string, field: 'size' | 'quantity', value: string | number) => {
+    setAssignments(prev => ({
+      ...prev,
+      [assetId]: {
+        ...prev[assetId],
+        [field]: value,
+      }
+    }))
   }
 
   return (
     <div>
-      <Header title="Productos" />
+      <Header title="Creación de productos" />
       <div className="space-y-6">
+        {/* Subheader */}
         <div className="hidden md:block">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-3xl font-bold mb-2">Productos</h1>
-              <p className="text-muted-foreground">
-                Gestiona tu catálogo de productos
-              </p>
-            </div>
-            <Button onClick={() => router.push('/admin/products/create')}>
-              <Plus className="mr-2 h-4 w-4" />
-              Crear Producto
-            </Button>
+          <div>
+            <h1 className="text-3xl font-bold mb-2">Creación de productos</h1>
+            <p className="text-muted-foreground">
+              Esta vista está diseñada para crear productos mediante la asignación de diseños y tallas
+            </p>
           </div>
         </div>
 
-        <div className="md:hidden mb-4">
-          <Button 
-            onClick={() => router.push('/admin/products/create')}
-            className="w-full"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Crear Producto
-          </Button>
-        </div>
-
-        <SearchBar
-          onSearch={handleSearch}
-          defaultValue={searchQuery}
-          placeholder="Buscar productos por nombre o SKU..."
-          className="max-w-2xl"
-        />
-
-        {/* Sección de Decoraciones (Imágenes) */}
+        {/* Sección de Decoraciones */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-2">
           <div className="flex items-center gap-2">
             <ImageIcon className="h-4 w-4 text-muted-foreground" />
@@ -270,53 +393,318 @@ export default function ProductsPage() {
           </div>
         </div>
 
-        {/* Modal de Editar Decoraciones */}
-        <Dialog open={editDecorationsOpen} onOpenChange={(open) => {
-          setEditDecorationsOpen(open)
-          if (open) {
-            loadPendingDesignAssets()
-          } else {
-            setEditingAsset(null)
-          }
-        }}>
-          <DialogContent className="w-[calc(100%-2rem)] sm:w-full max-w-5xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
-            <DialogHeader>
-              <DialogTitle className="pr-6 sm:pr-0 text-base sm:text-lg">Editar Decoraciones</DialogTitle>
-            </DialogHeader>
-            <div className="py-4">
-              {loadingDesignAssets ? (
-                <div className="flex justify-center items-center py-8">
-                  <LoadingSpinner size="lg" />
+        {/* Línea horizontal */}
+        <hr className="border-t" />
+
+        {/* Sección de Creación de Productos */}
+        <div className="space-y-6">
+          <h2 className="text-2xl font-semibold">Sección de creación de productos</h2>
+          
+          {/* Filtros */}
+          <Card>
+            <CardContent className="p-6">
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold mb-4">Filtros</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                  <div className="space-y-2">
+                    <Label>Color Primario</Label>
+                    <Combobox
+                      value={filters.colorPrimary}
+                      onValueChange={(value) => setFilters(prev => ({ ...prev, colorPrimary: value }))}
+                      options={DECORATION_COLORS}
+                      placeholder="Todos"
+                      searchPlaceholder="Buscar color..."
+                      allowClear
+                      clearLabel="Todos"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Color Secundario</Label>
+                    <Combobox
+                      value={filters.colorSecondary}
+                      onValueChange={(value) => setFilters(prev => ({ ...prev, colorSecondary: value }))}
+                      options={DECORATION_COLORS}
+                      placeholder="Todos"
+                      searchPlaceholder="Buscar color..."
+                      allowClear
+                      clearLabel="Todos"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Tipo de Buso</Label>
+                    <Combobox
+                      value={filters.hoodieType}
+                      onValueChange={(value) => setFilters(prev => ({ ...prev, hoodieType: value }))}
+                      options={BUSO_TYPES}
+                      placeholder="Todos"
+                      searchPlaceholder="Buscar tipo..."
+                      allowClear
+                      clearLabel="Todos"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Tipo de Imagen</Label>
+                    <Combobox
+                      value={filters.imageType}
+                      onValueChange={(value) => setFilters(prev => ({ ...prev, imageType: value }))}
+                      options={IMAGE_TYPES}
+                      placeholder="Todos"
+                      searchPlaceholder="Buscar tipo..."
+                      allowClear
+                      clearLabel="Todos"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Base de Decoración</Label>
+                    <Combobox
+                      value={filters.decoBase}
+                      onValueChange={(value) => setFilters(prev => ({ ...prev, decoBase: value }))}
+                      options={DECO_BASE_OPTIONS}
+                      placeholder="Todos"
+                      searchPlaceholder="Buscar base..."
+                      allowClear
+                      clearLabel="Todos"
+                    />
+                  </div>
                 </div>
-              ) : designAssets.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">
-                  No hay decoraciones pendientes
-                </p>
-              ) : (
-                <div className="space-y-6">
-                  {designAssets.map((asset, index) => {
-                    const baseAsset = editingAsset?.id === asset.id && editingAsset ? editingAsset : asset
-                    // Asegurar que decoBase tenga "N/A" como valor por defecto si está vacío
-                    const assetToEdit: DesignAsset = {
-                      ...baseAsset,
-                      decoBase: baseAsset.decoBase && baseAsset.decoBase.trim() ? baseAsset.decoBase : 'N/A',
-                    }
-                    const isSaved = asset.id && savedAssets.has(asset.id)
-                    
-                    return (
-                      <Card key={asset.id || index} className="overflow-hidden">
-                        <CardContent className="p-4 sm:p-6">
-                          {isSaved ? (
-                            <>
-                              {/* Estado comprimido - Asset guardado */}
-                              <div className="flex items-center gap-4">
-                              <div className="relative w-24 h-24 bg-muted rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0">
+                
+                <Button
+                  onClick={handleFilterDesigns}
+                  disabled={loadingFilters}
+                  className="w-full sm:w-auto"
+                >
+                  {loadingFilters ? 'Filtrando...' : 'Filtrar diseños'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Barra de búsqueda */}
+          <div className="max-w-2xl">
+            <div className="relative">
+              <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Buscar diseños por código o descripción..."
+                value={searchQuery}
+                onChange={(e) => handleSearch(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </div>
+
+          {/* Cards de Diseños */}
+          <div className="space-y-4">
+            <h3 className="text-xl font-semibold">Diseños</h3>
+            
+            {searchFilteredAssets.length === 0 ? (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <p className="text-muted-foreground mb-4">
+                    {filteredDesignAssets.length === 0 
+                      ? 'No hay diseños filtrados. Usa los filtros para buscar diseños.'
+                      : 'No se encontraron diseños que coincidan con la búsqueda'}
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {searchFilteredAssets.map((asset) => {
+                  const availableSizes = getAvailableSizes(asset.imageType)
+                  const assignment = assignments[asset.id || ''] || { size: '', quantity: 0 }
+                  
+                  return (
+                    <Card key={asset.id || asset.code} className="relative hover:shadow-lg transition-shadow">
+                      {/* Botón editar */}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-2 left-2 z-10 h-8 w-8"
+                        onClick={() => {
+                          if (asset.id) {
+                            loadDesignAssetForEdit(asset.id)
+                          }
+                        }}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      
+                      <CardContent className="p-4 space-y-4">
+                        {/* Imagen */}
+                        <div className="relative w-full aspect-square bg-muted rounded-lg overflow-hidden flex items-center justify-center">
+                          {(() => {
+                            const imagePath = asset.optimizedImageUrl || asset.imageUrl
+                            if (!imagePath) {
+                              return (
+                                <div className="flex items-center justify-center h-full text-muted-foreground">
+                                  <ImageIcon className="h-12 w-12" />
+                                </div>
+                              )
+                            }
+                            
+                            const fullUrl = asset.optimizedImageUrl
+                              ? imagePath.startsWith('http') 
+                                ? imagePath 
+                                : `${BACKEND_BASE_URL}${imagePath}`
+                              : imagePath
+                            
+                            return (
+                              <LazyImage
+                                src={fullUrl}
+                                alt={asset.description || 'Diseño'}
+                                className="max-w-full max-h-full w-full h-full object-contain"
+                                placeholderClassName="w-full h-full"
+                                errorPlaceholderClassName="w-full h-full"
+                              />
+                            )
+                          })()}
+                        </div>
+                        
+                        {/* ID (code) */}
+                        {asset.code && (
+                          <div>
+                            <p className="text-sm font-medium">ID: <span className="text-muted-foreground">{asset.code}</span></p>
+                          </div>
+                        )}
+                        
+                        {/* Descripción */}
+                        <div>
+                          <p className="text-sm text-muted-foreground">
+                            <span className="font-medium">Descripción:</span> {asset.description || 'Sin descripción'}
+                          </p>
+                        </div>
+                        
+                        {/* Asignación de talla */}
+                        <div className="space-y-2 pt-2 border-t">
+                          <p className="text-sm font-medium">Asignación de talla</p>
+                          
+                          <div className="grid grid-cols-2 gap-2">
+                            <Select
+                              value={assignment.size}
+                              onValueChange={(value) => updateAssignment(asset.id || '', 'size', value)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecciona talla" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {availableSizes.map((size) => (
+                                  <SelectItem key={size} value={size}>
+                                    {size}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            
+                            <Input
+                              type="number"
+                              min="1"
+                              placeholder="Cantidad"
+                              value={assignment.quantity || ''}
+                              onChange={(e) => updateAssignment(asset.id || '', 'quantity', parseInt(e.target.value) || 0)}
+                            />
+                          </div>
+                          
+                          <Button
+                            onClick={() => handleAssign(asset.id || '')}
+                            className="w-full"
+                            size="sm"
+                          >
+                            Asignar
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Modal de Editar Decoraciones */}
+      <Dialog open={editDecorationsOpen} onOpenChange={(open) => {
+        setEditDecorationsOpen(open)
+        if (!open) {
+          setEditingAsset(null)
+          setShowAllPending(false)
+          setAllPendingAssets([])
+        }
+      }}>
+        <DialogContent className="w-[calc(100%-2rem)] sm:w-full max-w-5xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+          <DialogHeader>
+            <DialogTitle className="pr-6 sm:pr-0 text-base sm:text-lg">Editar Decoraciones</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            {loadingDesignAsset || loadingPendingAssets ? (
+              <div className="flex justify-center items-center py-8">
+                <LoadingSpinner size="lg" />
+              </div>
+            ) : showAllPending && allPendingAssets.length > 0 ? (
+              <div className="space-y-6">
+                {allPendingAssets.map((asset, index) => {
+                  const baseAsset = editingAsset?.id === asset.id && editingAsset ? editingAsset : asset
+                  const assetToEdit: DesignAsset = {
+                    ...baseAsset,
+                    decoBase: baseAsset.decoBase && baseAsset.decoBase.trim() ? baseAsset.decoBase : 'N/A',
+                  }
+                  const isSaved = asset.id && savedAssets.has(asset.id)
+                  
+                  return (
+                    <Card key={asset.id || index} className="overflow-hidden">
+                      <CardContent className="p-4 sm:p-6">
+                        {isSaved ? (
+                          <div className="flex items-center gap-4">
+                            <div className="relative w-24 h-24 bg-muted rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0">
+                              {(() => {
+                                const imagePath = asset.optimizedImageUrl || asset.imageUrl
+                                if (!imagePath) {
+                                  return (
+                                    <div className="flex items-center justify-center h-full text-muted-foreground">
+                                      <ImageIcon className="h-8 w-8" />
+                                    </div>
+                                  )
+                                }
+                                
+                                const fullUrl = asset.optimizedImageUrl
+                                  ? imagePath.startsWith('http') 
+                                    ? imagePath 
+                                    : `${BACKEND_BASE_URL}${imagePath}`
+                                  : imagePath
+                                
+                                return (
+                                  <LazyImage
+                                    src={fullUrl}
+                                    alt={asset.description || 'Decoración'}
+                                    className="max-w-full max-h-full w-full h-full object-contain"
+                                    placeholderClassName="w-full h-full"
+                                    errorPlaceholderClassName="w-full h-full"
+                                  />
+                                )
+                              })()}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0" />
+                                <p className="text-sm font-medium text-green-600">Guardado exitosamente</p>
+                              </div>
+                              <p className="text-sm text-muted-foreground truncate">{asset.description || 'Sin descripción'}</p>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-4">
+                              <div className="relative w-full aspect-square bg-muted rounded-lg overflow-hidden flex items-center justify-center">
                                 {(() => {
                                   const imagePath = asset.optimizedImageUrl || asset.imageUrl
                                   if (!imagePath) {
                                     return (
                                       <div className="flex items-center justify-center h-full text-muted-foreground">
-                                        <ImageIcon className="h-8 w-8" />
+                                        <ImageIcon className="h-12 w-12" />
                                       </div>
                                     )
                                   }
@@ -338,56 +726,9 @@ export default function ProductsPage() {
                                   )
                                 })()}
                               </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0" />
-                                  <p className="text-sm font-medium text-green-600">Guardado exitosamente</p>
-                                </div>
-                                <p className="text-sm text-muted-foreground truncate">{asset.description || 'Sin descripción'}</p>
-                              </div>
                             </div>
-                            </>
-                          ) : (
-                            <>
-                              {/* Estado expandido - Formulario de edición */}
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                              {/* Imagen */}
-                              <div className="space-y-4">
-                                <div className="relative w-full aspect-square bg-muted rounded-lg overflow-hidden flex items-center justify-center">
-                                  {(() => {
-                                    // Usar optimizedImageUrl si está disponible, sino fallback a imageUrl
-                                    const imagePath = asset.optimizedImageUrl || asset.imageUrl
-                                    if (!imagePath) {
-                                      return (
-                                        <div className="flex items-center justify-center h-full text-muted-foreground">
-                                          <ImageIcon className="h-12 w-12" />
-                                        </div>
-                                      )
-                                    }
-                                    
-                                    // Construir URL completa: si optimizedImageUrl es relativo, agregar base URL
-                                    // Si imageUrl ya es completa (http/https), usarla directamente
-                                    const fullUrl = asset.optimizedImageUrl
-                                      ? imagePath.startsWith('http') 
-                                        ? imagePath 
-                                        : `${BACKEND_BASE_URL}${imagePath}`
-                                      : imagePath
-                                    
-                                    return (
-                                      <LazyImage
-                                        src={fullUrl}
-                                        alt={asset.description || 'Decoración'}
-                                        className="max-w-full max-h-full w-full h-full object-contain"
-                                        placeholderClassName="w-full h-full"
-                                        errorPlaceholderClassName="w-full h-full"
-                                      />
-                                    )
-                                  })()}
-                                </div>
-                              </div>
 
-                              {/* Formulario de edición */}
-                              <div className="space-y-4">
+                            <div className="space-y-4">
                               <div className="space-y-2">
                                 <Label htmlFor={`description-${index}`}>Descripción <span className="text-red-500">*</span></Label>
                                 <Input
@@ -406,8 +747,8 @@ export default function ProductsPage() {
                                   <Combobox
                                     value={assetToEdit.colorPrimary}
                                     onValueChange={(value) => {
+                                      if (!value) return // No permitir limpiar campos requeridos
                                       const updatedAsset = { ...assetToEdit, colorPrimary: value }
-                                      // Si colorSecondary está vacío, asignar el mismo que colorPrimary
                                       if (!updatedAsset.colorSecondary || !updatedAsset.colorSecondary.trim()) {
                                         updatedAsset.colorSecondary = value
                                       }
@@ -424,7 +765,7 @@ export default function ProductsPage() {
                                   <Combobox
                                     value={assetToEdit.colorSecondary}
                                     onValueChange={(value) => {
-                                      setEditingAsset({ ...assetToEdit, colorSecondary: value })
+                                      setEditingAsset({ ...assetToEdit, colorSecondary: value || '' })
                                     }}
                                     options={DECORATION_COLORS}
                                     placeholder="Seleccione un color"
@@ -439,6 +780,7 @@ export default function ProductsPage() {
                                   <Combobox
                                     value={assetToEdit.hoodieType}
                                     onValueChange={(value) => {
+                                      if (!value) return // No permitir limpiar campos requeridos
                                       setEditingAsset({ ...assetToEdit, hoodieType: value })
                                     }}
                                     options={BUSO_TYPES}
@@ -452,6 +794,7 @@ export default function ProductsPage() {
                                   <Combobox
                                     value={assetToEdit.imageType}
                                     onValueChange={(value) => {
+                                      if (!value) return // No permitir limpiar campos requeridos
                                       setEditingAsset({ ...assetToEdit, imageType: value })
                                     }}
                                     options={IMAGE_TYPES}
@@ -466,6 +809,7 @@ export default function ProductsPage() {
                                 <Combobox
                                   value={assetToEdit.decoBase || 'N/A'}
                                   onValueChange={(value) => {
+                                    if (!value) return // No permitir limpiar campos requeridos
                                     setEditingAsset({ ...assetToEdit, decoBase: value })
                                   }}
                                   options={DECO_BASE_OPTIONS}
@@ -488,7 +832,7 @@ export default function ProductsPage() {
                               </div>
 
                               <Button
-                                onClick={() => handleSaveAsset(assetToEdit, index)}
+                                onClick={() => handleSaveAsset(assetToEdit)}
                                 className="w-full"
                                 size="sm"
                               >
@@ -497,85 +841,178 @@ export default function ProductsPage() {
                               </Button>
                             </div>
                           </div>
-                            </>
-                          )}
-                        </CardContent>
-                      </Card>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
+                        )}
+                      </CardContent>
+                    </Card>
+                  )
+                })}
+              </div>
+            ) : editingAsset ? (
+              <div className="space-y-6">
+                <Card className="overflow-hidden">
+                  <CardContent className="p-4 sm:p-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Imagen */}
+                      <div className="space-y-4">
+                        <div className="relative w-full aspect-square bg-muted rounded-lg overflow-hidden flex items-center justify-center">
+                          {(() => {
+                            const imagePath = editingAsset.optimizedImageUrl || editingAsset.imageUrl
+                            if (!imagePath) {
+                              return (
+                                <div className="flex items-center justify-center h-full text-muted-foreground">
+                                  <ImageIcon className="h-12 w-12" />
+                                </div>
+                              )
+                            }
+                            
+                            const fullUrl = editingAsset.optimizedImageUrl
+                              ? imagePath.startsWith('http') 
+                                ? imagePath 
+                                : `${BACKEND_BASE_URL}${imagePath}`
+                              : imagePath
+                            
+                            return (
+                              <LazyImage
+                                src={fullUrl}
+                                alt={editingAsset.description || 'Decoración'}
+                                className="max-w-full max-h-full w-full h-full object-contain"
+                                placeholderClassName="w-full h-full"
+                                errorPlaceholderClassName="w-full h-full"
+                              />
+                            )
+                          })()}
+                        </div>
+                      </div>
 
-        {filteredProducts.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <p className="text-muted-foreground mb-4">
-                {searchQuery ? 'No se encontraron productos' : 'No hay productos registrados'}
-              </p>
-              <Button onClick={() => router.push('/admin/products/create')}>
-                <Plus className="mr-2 h-4 w-4" />
-                Crear Primer Producto
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredProducts.map((product) => (
-              <Card key={product.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <CardTitle className="text-lg mb-1">{product.name}</CardTitle>
-                      <p className="text-sm text-muted-foreground mb-1">{product.subtitle}</p>
-                      <p className="text-xs text-muted-foreground">SKU: {product.sku}</p>
+                      {/* Formulario de edición */}
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="description">Descripción <span className="text-red-500">*</span></Label>
+                          <Input
+                            id="description"
+                            value={editingAsset.description}
+                            onChange={(e) => {
+                              setEditingAsset({ ...editingAsset, description: e.target.value })
+                            }}
+                            placeholder="Descripción de la decoración"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="colorPrimary">Color Primario <span className="text-red-500">*</span></Label>
+                            <Combobox
+                              value={editingAsset.colorPrimary}
+                              onValueChange={(value) => {
+                                if (!value) return // No permitir limpiar campos requeridos
+                                const updatedAsset = { ...editingAsset, colorPrimary: value }
+                                if (!updatedAsset.colorSecondary || !updatedAsset.colorSecondary.trim()) {
+                                  updatedAsset.colorSecondary = value
+                                }
+                                setEditingAsset(updatedAsset)
+                              }}
+                              options={DECORATION_COLORS}
+                              placeholder="Seleccione un color"
+                              searchPlaceholder="Buscar color..."
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="colorSecondary">Color Secundario</Label>
+                            <Combobox
+                              value={editingAsset.colorSecondary}
+                              onValueChange={(value) => {
+                                setEditingAsset({ ...editingAsset, colorSecondary: value || '' })
+                              }}
+                              options={DECORATION_COLORS}
+                              placeholder="Seleccione un color"
+                              searchPlaceholder="Buscar color..."
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="hoodieType">Tipo de Buso <span className="text-red-500">*</span></Label>
+                            <Combobox
+                              value={editingAsset.hoodieType}
+                              onValueChange={(value) => {
+                                if (!value) return // No permitir limpiar campos requeridos
+                                setEditingAsset({ ...editingAsset, hoodieType: value })
+                              }}
+                              options={BUSO_TYPES}
+                              placeholder="Seleccione un tipo"
+                              searchPlaceholder="Buscar tipo..."
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="imageType">Tipo de Imagen <span className="text-red-500">*</span></Label>
+                            <Combobox
+                              value={editingAsset.imageType}
+                              onValueChange={(value) => {
+                                if (!value) return // No permitir limpiar campos requeridos
+                                setEditingAsset({ ...editingAsset, imageType: value })
+                              }}
+                              options={IMAGE_TYPES}
+                              placeholder="Seleccione un tipo"
+                              searchPlaceholder="Buscar tipo..."
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="decoBase">Base de Decoración <span className="text-red-500">*</span></Label>
+                          <Combobox
+                            value={editingAsset.decoBase || 'N/A'}
+                            onValueChange={(value) => {
+                              if (!value) return // No permitir limpiar campos requeridos
+                              setEditingAsset({ ...editingAsset, decoBase: value })
+                            }}
+                            options={DECO_BASE_OPTIONS}
+                            placeholder="Seleccione una base"
+                            searchPlaceholder="Buscar base..."
+                          />
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="hasHighlights"
+                            checked={editingAsset.hasHighlights}
+                            onCheckedChange={(checked) => {
+                              setEditingAsset({ ...editingAsset, hasHighlights: checked === true })
+                            }}
+                          />
+                          <Label htmlFor="hasHighlights" className="cursor-pointer">
+                            Tiene brillante
+                          </Label>
+                        </div>
+
+                        <Button
+                          onClick={() => handleSaveAsset(editingAsset)}
+                          className="w-full"
+                          size="sm"
+                        >
+                          <Save className="mr-2 h-4 w-4" />
+                          Guardar Cambios
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Precio:</span>
-                    <span className="font-semibold">${product.price.toLocaleString()}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Stock:</span>
-                    <span className="font-semibold">
-                      {product.stockTotal - product.stockReserved} disponible
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Variantes:</span>
-                    <span className="font-semibold">{product.variants.length}</span>
-                  </div>
-                  <div className="flex gap-2 pt-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEdit(product)}
-                      className="flex-1"
-                    >
-                      <Edit className="h-4 w-4 mr-2" />
-                      Editar
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDelete(product)}
-                      className="flex-1 text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Eliminar
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              </div>
+            ) : showAllPending && allPendingAssets.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">
+                No hay decoraciones pendientes
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-8">
+                Selecciona un diseño para editar o usa el botón &quot;Editar Decoraciones&quot; para ver todos los pendientes
+              </p>
+            )}
           </div>
-        )}
-      </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
-
