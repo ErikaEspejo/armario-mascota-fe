@@ -103,3 +103,50 @@ export async function getPendingDesignAssets(): Promise<DesignAsset[]> {
   }
 }
 
+/**
+ * Saves a design asset to the backend via Next.js API route (proxy)
+ * @param asset The design asset to save
+ * @returns Promise that resolves when the asset is saved successfully
+ */
+export async function saveDesignAsset(asset: DesignAsset): Promise<void> {
+  const url = '/api/design-assets/save'
+  
+  console.log('🔵 Guardando design asset desde API route:', url)
+  
+  try {
+    // Asegurar que el id sea string si existe (el backend espera string)
+    const assetToSend = {
+      ...asset,
+      id: asset.id ? String(asset.id) : undefined,
+    }
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(assetToSend),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+      console.error('🔴 Error en respuesta:', errorData)
+      throw new Error(errorData.error || `Error saving design asset: ${response.status} ${response.statusText}`)
+    }
+
+    console.log('✅ Design asset guardado exitosamente')
+  } catch (error) {
+    console.error('🔴 Error completo al guardar design asset:', error)
+    
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      throw new Error('No se pudo conectar con el servidor. Verifica que el servidor esté corriendo')
+    }
+    
+    if (error instanceof Error) {
+      throw error
+    }
+    
+    throw new Error('Error desconocido al guardar la decoración')
+  }
+}
+

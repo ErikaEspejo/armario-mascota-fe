@@ -17,8 +17,9 @@ import { LazyImage } from '@/components/common/LazyImage'
 import { BACKEND_BASE_URL } from '@/lib/constants'
 import { Product } from '@/types'
 import * as productService from '@/services/mock/products'
-import { loadDesignAssets, getPendingDesignAssets, DesignAsset } from '@/services/api/design-assets'
-import { Plus, Edit, Trash2, Upload, Image as ImageIcon, Settings, Save } from 'lucide-react'
+import { loadDesignAssets, getPendingDesignAssets, saveDesignAsset, DesignAsset } from '@/services/api/design-assets'
+import { DECORATION_COLORS, BUSO_TYPES, IMAGE_TYPES, DECO_BASE_OPTIONS } from '@/lib/decoration-constants'
+import { Plus, Edit, Trash2, Upload, Image as ImageIcon, Settings, Save, CheckCircle2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 export default function ProductsPage() {
@@ -32,6 +33,7 @@ export default function ProductsPage() {
   const [designAssets, setDesignAssets] = useState<DesignAsset[]>([])
   const [loadingDesignAssets, setLoadingDesignAssets] = useState(false)
   const [editingAsset, setEditingAsset] = useState<DesignAsset | null>(null)
+  const [savedAssets, setSavedAssets] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     loadProducts()
@@ -122,8 +124,15 @@ export default function ProductsPage() {
 
   const handleSaveAsset = async (asset: DesignAsset, index: number) => {
     try {
-      // TODO: Implementar guardado en el backend
       console.log('💾 Guardando asset:', asset)
+      
+      // Enviar al backend
+      await saveDesignAsset(asset)
+      
+      // Si el backend devuelve 200 (éxito), marcar como guardado
+      if (asset.id) {
+        setSavedAssets(prev => new Set(prev).add(asset.id!))
+      }
       
       // Actualizar el estado local
       const updatedAssets = [...designAssets]
@@ -134,7 +143,11 @@ export default function ProductsPage() {
       toast.success('Decoración guardada exitosamente')
     } catch (error) {
       console.error('🔴 Error guardando asset:', error)
-      toast.error('Error al guardar la decoración')
+      let errorMessage = 'Error al guardar la decoración'
+      if (error instanceof Error) {
+        errorMessage = error.message
+      }
+      toast.error(errorMessage)
     }
   }
 
@@ -244,26 +257,26 @@ export default function ProductsPage() {
                 <div className="space-y-6">
                   {designAssets.map((asset, index) => {
                     const assetToEdit: DesignAsset = editingAsset?.id === asset.id && editingAsset ? editingAsset : asset
+                    const isSaved = asset.id && savedAssets.has(asset.id)
+                    
                     return (
                       <Card key={asset.id || index} className="overflow-hidden">
                         <CardContent className="p-4 sm:p-6">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {/* Imagen */}
-                            <div className="space-y-4">
-                              <div className="relative w-full aspect-square bg-muted rounded-lg overflow-hidden flex items-center justify-center">
+                          {isSaved ? (
+                            <>
+                              {/* Estado comprimido - Asset guardado */}
+                              <div className="flex items-center gap-4">
+                              <div className="relative w-24 h-24 bg-muted rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0">
                                 {(() => {
-                                  // Usar optimizedImageUrl si está disponible, sino fallback a imageUrl
                                   const imagePath = asset.optimizedImageUrl || asset.imageUrl
                                   if (!imagePath) {
                                     return (
                                       <div className="flex items-center justify-center h-full text-muted-foreground">
-                                        <ImageIcon className="h-12 w-12" />
+                                        <ImageIcon className="h-8 w-8" />
                                       </div>
                                     )
                                   }
                                   
-                                  // Construir URL completa: si optimizedImageUrl es relativo, agregar base URL
-                                  // Si imageUrl ya es completa (http/https), usarla directamente
                                   const fullUrl = asset.optimizedImageUrl
                                     ? imagePath.startsWith('http') 
                                       ? imagePath 
@@ -281,10 +294,56 @@ export default function ProductsPage() {
                                   )
                                 })()}
                               </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0" />
+                                  <p className="text-sm font-medium text-green-600">Guardado exitosamente</p>
+                                </div>
+                                <p className="text-sm text-muted-foreground truncate">{asset.description || 'Sin descripción'}</p>
+                              </div>
                             </div>
+                            </>
+                          ) : (
+                            <>
+                              {/* Estado expandido - Formulario de edición */}
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              {/* Imagen */}
+                              <div className="space-y-4">
+                                <div className="relative w-full aspect-square bg-muted rounded-lg overflow-hidden flex items-center justify-center">
+                                  {(() => {
+                                    // Usar optimizedImageUrl si está disponible, sino fallback a imageUrl
+                                    const imagePath = asset.optimizedImageUrl || asset.imageUrl
+                                    if (!imagePath) {
+                                      return (
+                                        <div className="flex items-center justify-center h-full text-muted-foreground">
+                                          <ImageIcon className="h-12 w-12" />
+                                        </div>
+                                      )
+                                    }
+                                    
+                                    // Construir URL completa: si optimizedImageUrl es relativo, agregar base URL
+                                    // Si imageUrl ya es completa (http/https), usarla directamente
+                                    const fullUrl = asset.optimizedImageUrl
+                                      ? imagePath.startsWith('http') 
+                                        ? imagePath 
+                                        : `${BACKEND_BASE_URL}${imagePath}`
+                                      : imagePath
+                                    
+                                    return (
+                                      <LazyImage
+                                        src={fullUrl}
+                                        alt={asset.description || 'Decoración'}
+                                        className="max-w-full max-h-full w-full h-full object-contain"
+                                        placeholderClassName="w-full h-full"
+                                        errorPlaceholderClassName="w-full h-full"
+                                      />
+                                    )
+                                  })()}
+                                </div>
+                              </div>
 
-                            {/* Formulario de edición */}
-                            <div className="space-y-4">
+                              {/* Formulario de edición */}
+                              <div className="space-y-4">
                               <div className="space-y-2">
                                 <Label htmlFor={`description-${index}`}>Descripción</Label>
                                 <Input
@@ -310,12 +369,11 @@ export default function ProductsPage() {
                                       <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                      <SelectItem value="Negro">Negro</SelectItem>
-                                      <SelectItem value="Blanco">Blanco</SelectItem>
-                                      <SelectItem value="Azul">Azul</SelectItem>
-                                      <SelectItem value="Rojo">Rojo</SelectItem>
-                                      <SelectItem value="Verde">Verde</SelectItem>
-                                      <SelectItem value="Gris">Gris</SelectItem>
+                                      {DECORATION_COLORS.map((color) => (
+                                        <SelectItem key={color} value={color}>
+                                          {color}
+                                        </SelectItem>
+                                      ))}
                                     </SelectContent>
                                   </Select>
                                 </div>
@@ -332,12 +390,11 @@ export default function ProductsPage() {
                                       <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                      <SelectItem value="Negro">Negro</SelectItem>
-                                      <SelectItem value="Blanco">Blanco</SelectItem>
-                                      <SelectItem value="Azul">Azul</SelectItem>
-                                      <SelectItem value="Rojo">Rojo</SelectItem>
-                                      <SelectItem value="Verde">Verde</SelectItem>
-                                      <SelectItem value="Gris">Gris</SelectItem>
+                                      {DECORATION_COLORS.map((color) => (
+                                        <SelectItem key={color} value={color}>
+                                          {color}
+                                        </SelectItem>
+                                      ))}
                                     </SelectContent>
                                   </Select>
                                 </div>
@@ -356,9 +413,11 @@ export default function ProductsPage() {
                                       <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                      <SelectItem value="Con Mangas">Con Mangas</SelectItem>
-                                      <SelectItem value="Sin Mangas">Sin Mangas</SelectItem>
-                                      <SelectItem value="Canguro">Canguro</SelectItem>
+                                      {BUSO_TYPES.map((type) => (
+                                        <SelectItem key={type} value={type}>
+                                          {type}
+                                        </SelectItem>
+                                      ))}
                                     </SelectContent>
                                   </Select>
                                 </div>
@@ -375,9 +434,11 @@ export default function ProductsPage() {
                                       <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                      <SelectItem value="PNG">PNG</SelectItem>
-                                      <SelectItem value="JPG">JPG</SelectItem>
-                                      <SelectItem value="SVG">SVG</SelectItem>
+                                      {IMAGE_TYPES.map((type) => (
+                                        <SelectItem key={type} value={type}>
+                                          {type}
+                                        </SelectItem>
+                                      ))}
                                     </SelectContent>
                                   </Select>
                                 </div>
@@ -395,9 +456,11 @@ export default function ProductsPage() {
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent>
-                                    <SelectItem value="Base 1">Base 1</SelectItem>
-                                    <SelectItem value="Base 2">Base 2</SelectItem>
-                                    <SelectItem value="Base 3">Base 3</SelectItem>
+                                    {DECO_BASE_OPTIONS.map((option) => (
+                                      <SelectItem key={option} value={option}>
+                                        {option}
+                                      </SelectItem>
+                                    ))}
                                   </SelectContent>
                                 </Select>
                               </div>
@@ -411,7 +474,7 @@ export default function ProductsPage() {
                                   }}
                                 />
                                 <Label htmlFor={`hasHighlights-${index}`} className="cursor-pointer">
-                                  Tiene Resaltados
+                                  Tiene brillante
                                 </Label>
                               </div>
 
@@ -425,6 +488,8 @@ export default function ProductsPage() {
                               </Button>
                             </div>
                           </div>
+                            </>
+                          )}
                         </CardContent>
                       </Card>
                     )
