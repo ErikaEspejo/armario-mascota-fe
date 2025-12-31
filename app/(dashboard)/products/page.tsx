@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Combobox } from '@/components/ui/combobox'
 import { Checkbox } from '@/components/ui/checkbox'
 import { SearchBar } from '@/components/common/SearchBar'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
@@ -107,7 +107,12 @@ export default function ProductsPage() {
       console.log('🟡 Llamando a getPendingDesignAssets...')
       const data = await getPendingDesignAssets()
       console.log('✅ Design assets pendientes recibidos:', data)
-      setDesignAssets(data)
+      // Establecer "N/A" como valor por defecto para decoBase si está vacío
+      const assetsWithDefaults = data.map(asset => ({
+        ...asset,
+        decoBase: asset.decoBase && asset.decoBase.trim() ? asset.decoBase : 'N/A',
+      }))
+      setDesignAssets(assetsWithDefaults)
     } catch (error) {
       console.error('🔴 Error cargando design assets pendientes:', error)
       let errorMessage = 'Error al cargar las decoraciones pendientes'
@@ -126,17 +131,51 @@ export default function ProductsPage() {
     try {
       console.log('💾 Guardando asset:', asset)
       
-      // Enviar al backend
-      await saveDesignAsset(asset)
-      
-      // Si el backend devuelve 200 (éxito), marcar como guardado
-      if (asset.id) {
-        setSavedAssets(prev => new Set(prev).add(asset.id!))
+      // Validar campos requeridos
+      if (!asset.description || !asset.description.trim()) {
+        toast.error('La descripción es requerida')
+        return
       }
       
-      // Actualizar el estado local
+      if (!asset.colorPrimary || !asset.colorPrimary.trim()) {
+        toast.error('El color primario es requerido')
+        return
+      }
+      
+      if (!asset.hoodieType || !asset.hoodieType.trim()) {
+        toast.error('El tipo de buso es requerido')
+        return
+      }
+      
+      if (!asset.imageType || !asset.imageType.trim()) {
+        toast.error('El tipo de imagen es requerido')
+        return
+      }
+      
+      if (!asset.decoBase || !asset.decoBase.trim()) {
+        toast.error('La base de decoración es requerida')
+        return
+      }
+      
+      // Si colorSecondary está vacío, asignar el mismo que colorPrimary
+      const assetToSave = {
+        ...asset,
+        colorSecondary: asset.colorSecondary && asset.colorSecondary.trim() 
+          ? asset.colorSecondary 
+          : asset.colorPrimary,
+      }
+      
+      // Enviar al backend
+      await saveDesignAsset(assetToSave)
+      
+      // Si el backend devuelve 200 (éxito), marcar como guardado
+      if (assetToSave.id) {
+        setSavedAssets(prev => new Set(prev).add(assetToSave.id!))
+      }
+      
+      // Actualizar el estado local con el asset guardado (incluyendo colorSecondary asignado)
       const updatedAssets = [...designAssets]
-      updatedAssets[index] = asset
+      updatedAssets[index] = assetToSave
       setDesignAssets(updatedAssets)
       setEditingAsset(null)
       
@@ -256,7 +295,12 @@ export default function ProductsPage() {
               ) : (
                 <div className="space-y-6">
                   {designAssets.map((asset, index) => {
-                    const assetToEdit: DesignAsset = editingAsset?.id === asset.id && editingAsset ? editingAsset : asset
+                    const baseAsset = editingAsset?.id === asset.id && editingAsset ? editingAsset : asset
+                    // Asegurar que decoBase tenga "N/A" como valor por defecto si está vacío
+                    const assetToEdit: DesignAsset = {
+                      ...baseAsset,
+                      decoBase: baseAsset.decoBase && baseAsset.decoBase.trim() ? baseAsset.decoBase : 'N/A',
+                    }
                     const isSaved = asset.id && savedAssets.has(asset.id)
                     
                     return (
@@ -345,7 +389,7 @@ export default function ProductsPage() {
                               {/* Formulario de edición */}
                               <div className="space-y-4">
                               <div className="space-y-2">
-                                <Label htmlFor={`description-${index}`}>Descripción</Label>
+                                <Label htmlFor={`description-${index}`}>Descripción <span className="text-red-500">*</span></Label>
                                 <Input
                                   id={`description-${index}`}
                                   value={assetToEdit.description}
@@ -358,111 +402,76 @@ export default function ProductsPage() {
 
                               <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                  <Label htmlFor={`colorPrimary-${index}`}>Color Primario</Label>
-                                  <Select
+                                  <Label htmlFor={`colorPrimary-${index}`}>Color Primario <span className="text-red-500">*</span></Label>
+                                  <Combobox
                                     value={assetToEdit.colorPrimary}
                                     onValueChange={(value) => {
-                                      setEditingAsset({ ...assetToEdit, colorPrimary: value })
+                                      const updatedAsset = { ...assetToEdit, colorPrimary: value }
+                                      // Si colorSecondary está vacío, asignar el mismo que colorPrimary
+                                      if (!updatedAsset.colorSecondary || !updatedAsset.colorSecondary.trim()) {
+                                        updatedAsset.colorSecondary = value
+                                      }
+                                      setEditingAsset(updatedAsset)
                                     }}
-                                  >
-                                    <SelectTrigger>
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {DECORATION_COLORS.map((color) => (
-                                        <SelectItem key={color} value={color}>
-                                          {color}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
+                                    options={DECORATION_COLORS}
+                                    placeholder="Seleccione un color"
+                                    searchPlaceholder="Buscar color..."
+                                  />
                                 </div>
 
                                 <div className="space-y-2">
                                   <Label htmlFor={`colorSecondary-${index}`}>Color Secundario</Label>
-                                  <Select
+                                  <Combobox
                                     value={assetToEdit.colorSecondary}
                                     onValueChange={(value) => {
                                       setEditingAsset({ ...assetToEdit, colorSecondary: value })
                                     }}
-                                  >
-                                    <SelectTrigger>
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {DECORATION_COLORS.map((color) => (
-                                        <SelectItem key={color} value={color}>
-                                          {color}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
+                                    options={DECORATION_COLORS}
+                                    placeholder="Seleccione un color"
+                                    searchPlaceholder="Buscar color..."
+                                  />
                                 </div>
                               </div>
 
                               <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                  <Label htmlFor={`hoodieType-${index}`}>Tipo de Buso</Label>
-                                  <Select
+                                  <Label htmlFor={`hoodieType-${index}`}>Tipo de Buso <span className="text-red-500">*</span></Label>
+                                  <Combobox
                                     value={assetToEdit.hoodieType}
                                     onValueChange={(value) => {
                                       setEditingAsset({ ...assetToEdit, hoodieType: value })
                                     }}
-                                  >
-                                    <SelectTrigger>
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {BUSO_TYPES.map((type) => (
-                                        <SelectItem key={type} value={type}>
-                                          {type}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
+                                    options={BUSO_TYPES}
+                                    placeholder="Seleccione un tipo"
+                                    searchPlaceholder="Buscar tipo..."
+                                  />
                                 </div>
 
                                 <div className="space-y-2">
-                                  <Label htmlFor={`imageType-${index}`}>Tipo de Imagen</Label>
-                                  <Select
+                                  <Label htmlFor={`imageType-${index}`}>Tipo de Imagen <span className="text-red-500">*</span></Label>
+                                  <Combobox
                                     value={assetToEdit.imageType}
                                     onValueChange={(value) => {
                                       setEditingAsset({ ...assetToEdit, imageType: value })
                                     }}
-                                  >
-                                    <SelectTrigger>
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {IMAGE_TYPES.map((type) => (
-                                        <SelectItem key={type} value={type}>
-                                          {type}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
+                                    options={IMAGE_TYPES}
+                                    placeholder="Seleccione un tipo"
+                                    searchPlaceholder="Buscar tipo..."
+                                  />
                                 </div>
                               </div>
 
                               <div className="space-y-2">
-                                <Label htmlFor={`decoBase-${index}`}>Base de Decoración</Label>
-                                <Select
-                                  value={assetToEdit.decoBase}
+                                <Label htmlFor={`decoBase-${index}`}>Base de Decoración <span className="text-red-500">*</span></Label>
+                                <Combobox
+                                  value={assetToEdit.decoBase || 'N/A'}
                                   onValueChange={(value) => {
                                     setEditingAsset({ ...assetToEdit, decoBase: value })
                                   }}
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {DECO_BASE_OPTIONS.map((option) => (
-                                      <SelectItem key={option} value={option}>
-                                        {option}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
+                                  options={DECO_BASE_OPTIONS}
+                                  placeholder="Seleccione una base"
+                                  searchPlaceholder="Buscar base..."
+                                />
                               </div>
 
                               <div className="flex items-center space-x-2">
