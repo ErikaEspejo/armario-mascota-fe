@@ -19,6 +19,7 @@ import {
   saveDesignAsset, 
   filterDesignAssets,
   getDesignAssetById,
+  assignStockToDesignAsset,
   DesignAsset,
   DesignAssetFilters
 } from '@/services/api/design-assets'
@@ -303,47 +304,88 @@ export default function ProductsPage() {
   }
 
   const handleAssign = async (assetId: string) => {
+    console.log('🟢 [handleAssign] Botón "Asignar" clickeado para assetId:', assetId)
+    console.log('🟢 [handleAssign] Estado actual de assignments:', assignments)
+    
+    if (!assetId) {
+      console.error('🔴 [handleAssign] ID de diseño no válido:', assetId)
+      toast.error('ID de diseño no válido')
+      return
+    }
+    
     const assignment = assignments[assetId]
+    console.log('🟢 [handleAssign] Assignment encontrado:', assignment)
+    
     if (!assignment) {
+      console.error('🔴 [handleAssign] No hay asignación para este asset')
       toast.error('Por favor selecciona una talla y cantidad')
       return
     }
     
     if (!assignment.size) {
+      console.error('🔴 [handleAssign] No hay talla seleccionada')
       toast.error('Por favor selecciona una talla')
       return
     }
     
     if (!assignment.quantity || assignment.quantity <= 0) {
+      console.error('🔴 [handleAssign] Cantidad inválida:', assignment.quantity)
       toast.error('Por favor ingresa una cantidad válida')
       return
     }
     
+    console.log('🟢 [handleAssign] Validaciones pasadas. Datos a enviar:', {
+      assetId,
+      size: assignment.size,
+      quantity: assignment.quantity
+    })
+    
     try {
-      // TODO: Llamar a API para guardar asignación cuando se proporcione el endpoint
-      console.log('💾 Asignando:', { assetId, ...assignment })
-      toast.success(`Asignación guardada: ${assignment.quantity} unidades en talla ${assignment.size}`)
+      console.log('🟢 [handleAssign] Llamando a assignStockToDesignAsset con:', {
+        designAssetId: assetId,
+        size: assignment.size,
+        quantity: assignment.quantity
+      })
+      
+      await assignStockToDesignAsset(assetId, assignment.size, assignment.quantity)
+      
+      console.log('✅ [handleAssign] assignStockToDesignAsset completado exitosamente')
+      toast.success(`Stock asignado: ${assignment.quantity} unidades en talla ${assignment.size}`)
       
       // Limpiar asignación después de guardar
       setAssignments(prev => {
         const newAssignments = { ...prev }
         delete newAssignments[assetId]
+        console.log('✅ [handleAssign] Asignación limpiada para assetId:', assetId)
         return newAssignments
       })
     } catch (error) {
-      console.error('🔴 Error asignando:', error)
-      toast.error('Error al guardar la asignación')
+      console.error('🔴 [handleAssign] Error en el bloque catch:', error)
+      console.error('🔴 [handleAssign] Tipo de error:', error instanceof Error ? error.constructor.name : typeof error)
+      console.error('🔴 [handleAssign] Mensaje de error:', error instanceof Error ? error.message : String(error))
+      console.error('🔴 [handleAssign] Stack trace:', error instanceof Error ? error.stack : 'N/A')
+      
+      let errorMessage = 'Error al guardar la asignación'
+      if (error instanceof Error) {
+        errorMessage = error.message
+      }
+      toast.error(errorMessage)
     }
   }
 
   const updateAssignment = (assetId: string, field: 'size' | 'quantity', value: string | number) => {
-    setAssignments(prev => ({
-      ...prev,
-      [assetId]: {
-        ...prev[assetId],
-        [field]: value,
+    console.log('🟡 [updateAssignment] Actualizando asignación:', { assetId, field, value })
+    setAssignments(prev => {
+      const updated = {
+        ...prev,
+        [assetId]: {
+          ...prev[assetId],
+          [field]: value,
+        }
       }
-    }))
+      console.log('🟡 [updateAssignment] Estado de asignaciones actualizado:', updated[assetId])
+      return updated
+    })
   }
 
   return (
