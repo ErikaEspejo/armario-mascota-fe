@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -10,52 +11,91 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Product } from '@/types'
-import { X } from 'lucide-react'
+import { DECORATION_COLORS, BUSO_TYPES } from '@/lib/decoration-constants'
+import { X, Filter, Search } from 'lucide-react'
 
 interface ProductFiltersProps {
-  products: Product[]
   onFilterChange: (filters: FilterState) => void
+  onDescriptionSearch?: (searchText: string) => void
 }
 
 export interface FilterState {
   size?: string
-  color?: string
-  onlyAvailable?: boolean
-  lowStock?: boolean
+  primaryColor?: string
+  secondaryColor?: string
+  hoodieType?: string
+  descriptionSearch?: string
 }
 
-export function ProductFilters({ products, onFilterChange }: ProductFiltersProps) {
+const SIZES = ['Mini', 'Intermedio', 'XS', 'S', 'M', 'L', 'XL'] as const
+
+export function ProductFilters({ onFilterChange, onDescriptionSearch }: ProductFiltersProps) {
   const [filters, setFilters] = useState<FilterState>({})
+  const [descriptionSearch, setDescriptionSearch] = useState('')
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Extract unique sizes and colors from products
-  const sizes = Array.from(
-    new Set(products.flatMap(p => p.variants.map(v => v.size)))
-  ).sort()
-
-  const colors = Array.from(
-    new Set(products.flatMap(p => p.variants.map(v => v.color)))
-  ).sort()
-
-  useEffect(() => {
-    onFilterChange(filters)
-  }, [filters, onFilterChange])
-
-  const updateFilter = (key: keyof FilterState, value: unknown) => {
-    setFilters(prev => ({ ...prev, [key]: value }))
+  const updateFilter = (key: keyof FilterState, value: string) => {
+    // Si el valor es '__clear__', lo tratamos como undefined para limpiar el filtro
+    if (value === '__clear__') {
+      setFilters(prev => {
+        const newFilters = { ...prev }
+        delete newFilters[key]
+        return newFilters
+      })
+    } else {
+      setFilters(prev => ({ ...prev, [key]: value }))
+    }
   }
 
   const clearFilters = () => {
     setFilters({})
+    setDescriptionSearch('')
   }
 
-  const hasActiveFilters = Object.values(filters).some(v => v !== undefined && v !== false)
+  const handleFilter = () => {
+    onFilterChange(filters)
+  }
+
+  // Manejar búsqueda de descripción con debounce
+  useEffect(() => {
+    // Limpiar timer anterior si existe
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current)
+    }
+
+    // Si hay texto de búsqueda, aplicar después de 300ms
+    if (descriptionSearch.trim()) {
+      debounceTimerRef.current = setTimeout(() => {
+        if (onDescriptionSearch) {
+          onDescriptionSearch(descriptionSearch.trim())
+        }
+      }, 300)
+    } else {
+      // Si está vacío, aplicar inmediatamente para limpiar
+      if (onDescriptionSearch) {
+        onDescriptionSearch('')
+      }
+    }
+
+    // Cleanup
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current)
+      }
+    }
+  }, [descriptionSearch, onDescriptionSearch])
+
+  const handleDescriptionSearchChange = (value: string) => {
+    setDescriptionSearch(value)
+  }
+
+  const hasAnyFilter = Object.values(filters).some(v => v !== undefined && v !== '') || descriptionSearch.trim() !== ''
 
   return (
     <div className="space-y-4 p-4 bg-muted rounded-lg">
       <div className="flex items-center justify-between">
         <h3 className="font-semibold">Filtros</h3>
-        {hasActiveFilters && (
+        {hasAnyFilter && (
           <Button variant="ghost" size="sm" onClick={clearFilters}>
             <X className="h-4 w-4 mr-2" />
             Limpiar
@@ -63,19 +103,32 @@ export function ProductFilters({ products, onFilterChange }: ProductFiltersProps
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="space-y-2">
+      {!hasAnyFilter && (
+        <div className="p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-md">
+          <p className="text-sm text-blue-900 dark:text-blue-100">
+            Se requiere al menos un filtro para mostrar resultados
+          </p>
+        </div>
+      )}
+
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-end gap-4">
+          <div className="space-y-2 flex-1 min-w-[150px]">
           <Label>Talla</Label>
           <Select
-            value={filters.size || ''}
-            onValueChange={(value) => updateFilter('size', value || undefined)}
+            value={filters.size || undefined}
+            onValueChange={(value) => updateFilter('size', value)}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Todas las tallas" />
+              <SelectValue placeholder="Seleccionar talla" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todas las tallas</SelectItem>
-              {sizes.map((size) => (
+              {filters.size && (
+                <SelectItem value="__clear__">
+                  <span className="text-muted-foreground">Limpiar selección</span>
+                </SelectItem>
+              )}
+              {SIZES.map((size) => (
                 <SelectItem key={size} value={size}>
                   {size}
                 </SelectItem>
@@ -84,18 +137,22 @@ export function ProductFilters({ products, onFilterChange }: ProductFiltersProps
           </Select>
         </div>
 
-        <div className="space-y-2">
-          <Label>Color</Label>
+        <div className="space-y-2 flex-1 min-w-[150px]">
+          <Label>Color Principal</Label>
           <Select
-            value={filters.color || ''}
-            onValueChange={(value) => updateFilter('color', value || undefined)}
+            value={filters.primaryColor || undefined}
+            onValueChange={(value) => updateFilter('primaryColor', value)}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Todos los colores" />
+              <SelectValue placeholder="Seleccionar color" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todos los colores</SelectItem>
-              {colors.map((color) => (
+              {filters.primaryColor && (
+                <SelectItem value="__clear__">
+                  <span className="text-muted-foreground">Limpiar selección</span>
+                </SelectItem>
+              )}
+              {DECORATION_COLORS.map((color) => (
                 <SelectItem key={color} value={color}>
                   {color}
                 </SelectItem>
@@ -104,27 +161,78 @@ export function ProductFilters({ products, onFilterChange }: ProductFiltersProps
           </Select>
         </div>
 
-        <div className="space-y-2">
-          <Label>Estado</Label>
+        <div className="space-y-2 flex-1 min-w-[150px]">
+          <Label>Color Secundario</Label>
+          <Select
+            value={filters.secondaryColor || undefined}
+            onValueChange={(value) => updateFilter('secondaryColor', value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Seleccionar color" />
+            </SelectTrigger>
+            <SelectContent>
+              {filters.secondaryColor && (
+                <SelectItem value="__clear__">
+                  <span className="text-muted-foreground">Limpiar selección</span>
+                </SelectItem>
+              )}
+              {DECORATION_COLORS.map((color) => (
+                <SelectItem key={color} value={color}>
+                  {color}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2 flex-1 min-w-[150px]">
+          <Label>Tipo de Buso</Label>
+          <Select
+            value={filters.hoodieType || undefined}
+            onValueChange={(value) => updateFilter('hoodieType', value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Seleccionar tipo" />
+            </SelectTrigger>
+            <SelectContent>
+              {filters.hoodieType && (
+                <SelectItem value="__clear__">
+                  <span className="text-muted-foreground">Limpiar selección</span>
+                </SelectItem>
+              )}
+              {BUSO_TYPES.map((type) => (
+                <SelectItem key={type} value={type}>
+                  {type}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          </div>
+
           <div className="space-y-2">
-            <label className="flex items-center space-x-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={filters.onlyAvailable || false}
-                onChange={(e) => updateFilter('onlyAvailable', e.target.checked)}
-                className="rounded"
-              />
-              <span className="text-sm">Solo disponibles</span>
-            </label>
-            <label className="flex items-center space-x-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={filters.lowStock || false}
-                onChange={(e) => updateFilter('lowStock', e.target.checked)}
-                className="rounded"
-              />
-              <span className="text-sm">Bajo stock</span>
-            </label>
+            <Label className="opacity-0">Filtrar</Label>
+            <Button
+              onClick={handleFilter}
+              disabled={!hasAnyFilter}
+              className="min-w-[100px]"
+            >
+              <Filter className="h-4 w-4 mr-2" />
+              Filtrar
+            </Button>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Buscar por descripción</Label>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Escribe para buscar en las descripciones..."
+              value={descriptionSearch}
+              onChange={(e) => handleDescriptionSearchChange(e.target.value)}
+              className="pl-9"
+            />
           </div>
         </div>
       </div>

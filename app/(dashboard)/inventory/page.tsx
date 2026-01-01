@@ -1,115 +1,110 @@
 'use client'
 
-import { useEffect, useState, Suspense } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
-import { useApp } from '@/context/AppContext'
-import { useCart } from '@/context/CartContext'
+import { useState, Suspense, useCallback, useRef, useEffect } from 'react'
 import { Header } from '@/components/layout/Header'
-import { SearchBar } from '@/components/common/SearchBar'
 import { ProductGrid } from '@/components/inventory/ProductGrid'
 import { ProductFilters, FilterState } from '@/components/inventory/ProductFilters'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
-import { Product } from '@/types'
-import * as productService from '@/services/mock/products'
+import { EmptyState } from '@/components/common/EmptyState'
+import { FilteredItem } from '@/types'
+import { filterItems } from '@/services/api/items'
 import { toast } from 'sonner'
+import { Filter } from 'lucide-react'
 
 function InventoryPageContent() {
-  const searchParams = useSearchParams()
-  const router = useRouter()
-  const { products, loading: contextLoading } = useApp()
-  const { addItem } = useCart()
-  const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
+  const [filteredItems, setFilteredItems] = useState<FilteredItem[]>([])
+  const [allItems, setAllItems] = useState<FilteredItem[]>([]) // Almacenar todos los items filtrados por API
   const [loading, setLoading] = useState(false)
-  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '')
-
+  const [hasSearched, setHasSearched] = useState(false)
+  const [descriptionSearch, setDescriptionSearch] = useState('')
+  const allItemsRef = useRef<FilteredItem[]>([])
+  
+  // Mantener allItemsRef actualizado
   useEffect(() => {
-    loadProducts()
-  }, [searchQuery])
-
-  const loadProducts = async () => {
-    setLoading(true)
-    try {
-      let result: Product[]
-      if (searchQuery.trim()) {
-        result = await productService.searchProducts(searchQuery)
-      } else {
-        result = await productService.getProducts()
-      }
-      setFilteredProducts(result)
-    } catch (error) {
-      console.error('Error loading products:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleSearch = (query: string) => {
-    setSearchQuery(query)
-    const params = new URLSearchParams(searchParams.toString())
-    if (query.trim()) {
-      params.set('search', query.trim())
-    } else {
-      params.delete('search')
-    }
-    router.push(`/inventory?${params.toString()}`)
-  }
+    allItemsRef.current = allItems
+  }, [allItems])
 
   const handleFilterChange = async (filters: FilterState) => {
     setLoading(true)
+    setHasSearched(true)
     try {
-      const result = await productService.filterProducts(filters)
-      let filtered = result
-
-      // Apply search query if exists
-      if (searchQuery.trim()) {
-        const lowerQuery = searchQuery.toLowerCase()
-        filtered = filtered.filter(
-          p =>
-            p.name.toLowerCase().includes(lowerQuery) ||
-            p.sku.toLowerCase().includes(lowerQuery) ||
-            p.subtitle.toLowerCase().includes(lowerQuery)
-        )
-      }
-
-      setFilteredProducts(filtered)
+      const result = await filterItems({
+        size: filters.size,
+        primaryColor: filters.primaryColor,
+        secondaryColor: filters.secondaryColor,
+        hoodieType: filters.hoodieType,
+      })
+      setAllItems(result)
+      // Aplicar filtro de descripción si existe
+      applyDescriptionFilter(result, descriptionSearch)
     } catch (error) {
-      console.error('Error filtering products:', error)
+      console.error('Error filtering items:', error)
+      toast.error('Error al filtrar productos. Intenta nuevamente.')
+      setAllItems([])
+      setFilteredItems([])
     } finally {
       setLoading(false)
     }
   }
 
-  const handleAddToOrder = (product: Product) => {
-    // Add first available variant to cart
-    const availableVariant = product.variants.find(
-      v => v.stockTotal - v.stockReserved > 0
-    )
-
-    if (!availableVariant) {
-      toast.error('No hay stock disponible para este producto')
-      return
+  const applyDescriptionFilter = useCallback((items: FilteredItem[], searchText: string) => {
+    let filtered = items
+    
+    if (searchText.trim()) {
+      const lowerSearch = searchText.toLowerCase().trim()
+      filtered = items.filter(item =>
+        item.description?.toLowerCase().includes(lowerSearch) ||
+        item.sku?.toLowerCase().includes(lowerSearch)
+      )
     }
 
-    addItem({
-      productId: product.id,
-      productName: product.name,
-      variantId: availableVariant.id,
-      size: availableVariant.size,
-      color: availableVariant.color,
-      quantity: 1,
-      price: availableVariant.price,
-      subtotal: availableVariant.price,
-      productImageUrl: product.imageUrl,
+    // Ordenar por talla según el orden especificado
+    const sizeOrder: Record<string, number> = {
+      'MN': 1,
+      'IT': 2,
+      'XS': 3,
+      'S': 4,
+      'M': 5,
+      'L': 6,
+    }
+
+    const sortedItems = [...filtered].sort((a, b) => {
+      const orderA = sizeOrder[a.size] ?? 999
+      const orderB = sizeOrder[b.size] ?? 999
+
+      // Si ambas tallas están en el orden definido, ordenar por ese orden
+      if (orderA !== 999 && orderB !== 999) {
+        return orderA - orderB
+      }
+
+      // Si solo una está en el orden definido, esa va primero
+      if (orderA !== 999) return -1
+      if (orderB !== 999) return 1
+
+      // Si ninguna está en el orden definido, ordenar alfabéticamente
+      return a.size.localeCompare(b.size)
     })
 
-    toast.success('Producto agregado al carrito')
-    router.push('/separate')
-  }
+    setFilteredItems(sortedItems)
+  }, [])
 
-  if (contextLoading || loading) {
+  const handleDescriptionSearch = useCallback((searchText: string) => {
+    setDescriptionSearch(searchText)
+    // Si ya hay items cargados, filtrar localmente usando la referencia
+    if (allItemsRef.current.length > 0) {
+      applyDescriptionFilter(allItemsRef.current, searchText)
+    }
+    // Si hay texto de búsqueda pero no hay items, marcar como buscado
+    if (searchText.trim()) {
+      setHasSearched(true)
+    }
+  }, [applyDescriptionFilter])
+
+
+  if (loading) {
     return (
       <div>
-        <Header title="Inventario" showSearch />
+        <Header title="Inventario" showSearch={false} />
         <div className="flex justify-center items-center min-h-[400px]">
           <LoadingSpinner size="lg" />
         </div>
@@ -119,7 +114,7 @@ function InventoryPageContent() {
 
   return (
     <div>
-      <Header title="Inventario" showSearch />
+      <Header title="Inventario" showSearch={false} />
       <div className="space-y-6">
         <div className="hidden md:block">
           <h1 className="text-3xl font-bold mb-2">Inventario</h1>
@@ -128,21 +123,22 @@ function InventoryPageContent() {
           </p>
         </div>
 
-        <SearchBar
-          onSearch={handleSearch}
-          defaultValue={searchQuery}
-          className="max-w-2xl"
-        />
-
-        <ProductFilters
-          products={products}
+        <ProductFilters 
           onFilterChange={handleFilterChange}
+          onDescriptionSearch={handleDescriptionSearch}
         />
 
-        <ProductGrid
-          products={filteredProducts}
-          onAddToOrder={handleAddToOrder}
-        />
+        {!hasSearched ? (
+          <EmptyState
+            icon={Filter}
+            title="Se requiere al menos un filtro para mostrar resultados"
+            description="Selecciona al menos un filtro y haz clic en 'Filtrar' para ver los productos disponibles"
+          />
+        ) : (
+          <ProductGrid
+            items={filteredItems}
+          />
+        )}
       </div>
     </div>
   )

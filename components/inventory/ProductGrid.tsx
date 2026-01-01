@@ -1,17 +1,16 @@
 'use client'
 
-import { Product } from '@/types'
+import { FilteredItem } from '@/types'
 import { ProductCard } from './ProductCard'
 import { EmptyState } from '@/components/common/EmptyState'
 import { Package } from 'lucide-react'
 
 interface ProductGridProps {
-  products: Product[]
-  onAddToOrder?: (product: Product) => void
+  items: FilteredItem[]
 }
 
-export function ProductGrid({ products, onAddToOrder }: ProductGridProps) {
-  if (products.length === 0) {
+export function ProductGrid({ items }: ProductGridProps) {
+  if (items.length === 0) {
     return (
       <EmptyState
         icon={Package}
@@ -23,11 +22,10 @@ export function ProductGrid({ products, onAddToOrder }: ProductGridProps) {
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-      {products.map((product) => (
+      {items.map((item) => (
         <ProductCard
-          key={product.id}
-          product={product}
-          onAddToOrder={onAddToOrder}
+          key={`${item.id}-${item.sku}`}
+          item={item}
         />
       ))}
     </div>

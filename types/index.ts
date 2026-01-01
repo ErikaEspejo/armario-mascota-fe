@@ -68,6 +68,18 @@ export interface CatalogExport {
   createdAt: string
 }
 
+export interface FilteredItem {
+  id: number
+  sku: string
+  size: string
+  price: number
+  stockTotal: number
+  stockReserved: number
+  designAssetId: number
+  description: string
+  imageUrl: string
+}
+
 export type OrderStatus = Order['status']
 export type PaymentMethod = Sale['paymentMethod']
 export type TemplateVersion = CatalogExport['templateVersion']
