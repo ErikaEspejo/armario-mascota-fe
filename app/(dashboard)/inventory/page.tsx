@@ -6,10 +6,18 @@ import { ProductGrid } from '@/components/inventory/ProductGrid'
 import { ProductFilters, FilterState } from '@/components/inventory/ProductFilters'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { EmptyState } from '@/components/common/EmptyState'
+import { SelectCartModal } from '@/components/inventory/SelectCartModal'
 import { FilteredItem } from '@/types'
 import { filterItems } from '@/services/api/items'
+import { addItemToReservedOrder } from '@/services/api/reserved-orders'
 import { toast } from 'sonner'
-import { Filter } from 'lucide-react'
+import { Filter, ShoppingCart } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+
+const STORAGE_KEYS = {
+  ACTIVE_RESERVED_ORDER_ID: 'activeReservedOrderId',
+  ACTIVE_RESERVED_ORDER_LABEL: 'activeReservedOrderLabel',
+}
 
 function InventoryPageContent() {
   const [filteredItems, setFilteredItems] = useState<FilteredItem[]>([])
@@ -19,10 +27,59 @@ function InventoryPageContent() {
   const [descriptionSearch, setDescriptionSearch] = useState('')
   const allItemsRef = useRef<FilteredItem[]>([])
   
+  // Reserved order state
+  const [activeReservedOrderId, setActiveReservedOrderId] = useState<number | null>(null)
+  const [activeReservedOrderLabel, setActiveReservedOrderLabel] = useState<string>('')
+  const [selectCartModalOpen, setSelectCartModalOpen] = useState(false)
+  
   // Mantener allItemsRef actualizado
   useEffect(() => {
     allItemsRef.current = allItems
   }, [allItems])
+
+  // Load active reserved order from localStorage on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedId = localStorage.getItem(STORAGE_KEYS.ACTIVE_RESERVED_ORDER_ID)
+      const storedLabel = localStorage.getItem(STORAGE_KEYS.ACTIVE_RESERVED_ORDER_LABEL)
+      
+      if (storedId) {
+        const orderId = parseInt(storedId, 10)
+        if (!isNaN(orderId)) {
+          setActiveReservedOrderId(orderId)
+          setActiveReservedOrderLabel(storedLabel || '')
+        }
+      }
+    }
+  }, [])
+
+  // Save active reserved order to localStorage
+  const saveActiveReservedOrder = useCallback((orderId: number, label: string) => {
+    setActiveReservedOrderId(orderId)
+    setActiveReservedOrderLabel(label)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_KEYS.ACTIVE_RESERVED_ORDER_ID, orderId.toString())
+      localStorage.setItem(STORAGE_KEYS.ACTIVE_RESERVED_ORDER_LABEL, label)
+    }
+  }, [])
+
+  // Handle cart selection
+  const handleSelectCart = useCallback((orderId: number, label: string) => {
+    saveActiveReservedOrder(orderId, label)
+    setSelectCartModalOpen(false)
+  }, [saveActiveReservedOrder])
+
+  // Handle add to cart
+  const handleAddToCart = useCallback(async (orderId: number, itemId: number, qty: number) => {
+    try {
+      await addItemToReservedOrder(orderId, { itemId, qty })
+      toast.success('Producto agregado al carrito exitosamente')
+    } catch (error) {
+      console.error('Error adding item to cart:', error)
+      toast.error(error instanceof Error ? error.message : 'Error al agregar el producto al carrito')
+      throw error
+    }
+  }, [])
 
   const handleFilterChange = async (filters: FilterState) => {
     setLoading(true)
@@ -123,6 +180,30 @@ function InventoryPageContent() {
           </p>
         </div>
 
+        {/* Cart selection and active cart indicator */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 bg-muted/50 rounded-lg border">
+          <div className="flex-1">
+            {activeReservedOrderId ? (
+              <div className="flex items-center gap-2">
+                <ShoppingCart className="h-5 w-5 text-primary" />
+                <span className="font-semibold">Carrito activo:</span>
+                <span className="text-primary">{activeReservedOrderLabel || `#${activeReservedOrderId}`}</span>
+              </div>
+            ) : (
+              <div className="text-muted-foreground">
+                No hay carrito activo
+              </div>
+            )}
+          </div>
+          <Button
+            onClick={() => setSelectCartModalOpen(true)}
+            variant={activeReservedOrderId ? 'outline' : 'default'}
+            size="sm"
+          >
+            {activeReservedOrderId ? 'Cambiar carrito' : 'Seleccionar carrito'}
+          </Button>
+        </div>
+
         <ProductFilters 
           onFilterChange={handleFilterChange}
           onDescriptionSearch={handleDescriptionSearch}
@@ -137,9 +218,18 @@ function InventoryPageContent() {
         ) : (
           <ProductGrid
             items={filteredItems}
+            activeReservedOrderId={activeReservedOrderId}
+            onAddToCart={handleAddToCart}
+            onSelectCart={() => setSelectCartModalOpen(true)}
           />
         )}
       </div>
+
+      <SelectCartModal
+        open={selectCartModalOpen}
+        onOpenChange={setSelectCartModalOpen}
+        onSelectCart={handleSelectCart}
+      />
     </div>
   )
 }

@@ -7,9 +7,12 @@ import { Package } from 'lucide-react'
 
 interface ProductGridProps {
   items: FilteredItem[]
+  activeReservedOrderId: number | null
+  onAddToCart: (orderId: number, itemId: number, qty: number) => Promise<void>
+  onSelectCart: () => void
 }
 
-export function ProductGrid({ items }: ProductGridProps) {
+export function ProductGrid({ items, activeReservedOrderId, onAddToCart, onSelectCart }: ProductGridProps) {
   if (items.length === 0) {
     return (
       <EmptyState
@@ -26,6 +29,9 @@ export function ProductGrid({ items }: ProductGridProps) {
         <ProductCard
           key={`${item.id}-${item.sku}`}
           item={item}
+          activeReservedOrderId={activeReservedOrderId}
+          onAddToCart={onAddToCart}
+          onSelectCart={onSelectCart}
         />
       ))}
     </div>

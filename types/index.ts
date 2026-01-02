@@ -80,6 +80,36 @@ export interface FilteredItem {
   imageUrl: string
 }
 
+export interface ReservedOrder {
+  id: number
+  status: 'reserved' | 'expired' | 'cancelled' | 'sold'
+  assignedTo: string
+  customerName: string | null
+  customerPhone?: string | null
+  notes?: string | null
+  createdAt: string
+  updatedAt: string
+  lineCount?: number
+  total?: number
+}
+
+export interface CreateReservedOrderPayload {
+  assignedTo: string
+  customerName?: string
+  customerPhone?: string
+  notes?: string
+  orderType: 'Detal' | 'Mayorista'
+}
+
+export interface AddItemToReservedOrderPayload {
+  itemId: number
+  qty: number
+}
+
+export interface ReservedOrdersResponse {
+  orders: ReservedOrder[]
+}
+
 export type OrderStatus = Order['status']
 export type PaymentMethod = Sale['paymentMethod']
 export type TemplateVersion = CatalogExport['templateVersion']

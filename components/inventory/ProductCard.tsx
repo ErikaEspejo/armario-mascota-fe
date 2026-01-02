@@ -1,16 +1,25 @@
 'use client'
 
+import { useState } from 'react'
 import { FilteredItem } from '@/types'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { formatCurrency } from '@/lib/utils'
 import { LazyImage } from '@/components/common/LazyImage'
 import { BACKEND_BASE_URL } from '@/lib/constants'
+import { QuantitySelector } from './QuantitySelector'
+import { ShoppingCart, Loader2 } from 'lucide-react'
 
 interface ProductCardProps {
   item: FilteredItem
+  activeReservedOrderId: number | null
+  onAddToCart: (orderId: number, itemId: number, qty: number) => Promise<void>
+  onSelectCart: () => void
 }
 
-export function ProductCard({ item }: ProductCardProps) {
+export function ProductCard({ item, activeReservedOrderId, onAddToCart, onSelectCart }: ProductCardProps) {
+  const [quantity, setQuantity] = useState(1)
+  const [addingToCart, setAddingToCart] = useState(false)
   const available = item.stockTotal - item.stockReserved
   
   // Handle relative image URLs by prepending backend base URL if needed
@@ -26,6 +35,26 @@ export function ProductCard({ item }: ProductCardProps) {
   }
 
   const displaySize = getDisplaySize(item.size)
+
+  const handleAddToCart = async () => {
+    if (!activeReservedOrderId) {
+      onSelectCart()
+      return
+    }
+
+    if (quantity <= 0) {
+      return
+    }
+
+    setAddingToCart(true)
+    try {
+      await onAddToCart(activeReservedOrderId, item.id, quantity)
+    } catch {
+      // Error handling is done in parent component
+    } finally {
+      setAddingToCart(false)
+    }
+  }
 
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow">
@@ -64,6 +93,36 @@ export function ProductCard({ item }: ProductCardProps) {
                 {formatCurrency(item.price)}
               </span>
             </div>
+          </div>
+          <div className="pt-3 border-t space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Cantidad:</span>
+              <QuantitySelector
+                value={quantity}
+                onChange={setQuantity}
+                min={1}
+                max={available > 0 ? available : undefined}
+                disabled={addingToCart || available === 0}
+              />
+            </div>
+            <Button
+              onClick={handleAddToCart}
+              disabled={addingToCart || available === 0 || quantity <= 0}
+              className="w-full"
+              size="sm"
+            >
+              {addingToCart ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Agregando...
+                </>
+              ) : (
+                <>
+                  <ShoppingCart className="h-4 w-4 mr-2" />
+                  Agregar al carrito
+                </>
+              )}
+            </Button>
           </div>
         </div>
       </CardContent>
