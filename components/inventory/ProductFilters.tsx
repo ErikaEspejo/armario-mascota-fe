@@ -225,13 +225,17 @@ export function ProductFilters({ onFilterChange, onDescriptionSearch }: ProductF
         <div className="space-y-2">
           <Label>Buscar por descripción</Label>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
             <Input
               type="text"
+              inputMode="text"
+              autoComplete="off"
               placeholder="Escribe para buscar en las descripciones..."
               value={descriptionSearch}
               onChange={(e) => handleDescriptionSearchChange(e.target.value)}
-              className="pl-9"
+              onInput={(e) => handleDescriptionSearchChange((e.target as HTMLInputElement).value)}
+              className="pl-9 w-full"
+              style={{ WebkitAppearance: 'none' }}
             />
           </div>
         </div>

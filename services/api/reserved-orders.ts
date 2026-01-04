@@ -1,4 +1,34 @@
-import { ReservedOrdersResponse, ReservedOrder, CreateReservedOrderPayload, AddItemToReservedOrderPayload } from '@/types'
+import { ReservedOrdersResponse, ReservedOrder, CreateReservedOrderPayload, AddItemToReservedOrderPayload, SeparatedOrdersResponse } from '@/types'
+
+/**
+ * Obtiene los pedidos separados (reserved, cancelled, completed)
+ */
+export async function getSeparatedOrders(): Promise<ReservedOrder[]> {
+  const url = '/api/reserved-orders/separated'
+  
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+      throw new Error(errorData.error || `Error fetching separated orders: ${response.status} ${response.statusText}`)
+    }
+
+    const data: SeparatedOrdersResponse = await response.json()
+    return data.carts || []
+  } catch (error) {
+    console.error('Error fetching separated orders:', error)
+    if (error instanceof Error) {
+      throw error
+    }
+    throw new Error('Error desconocido al obtener los pedidos separados')
+  }
+}
 
 /**
  * Obtiene los carritos separados con status=reserved

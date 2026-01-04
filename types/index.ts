@@ -80,17 +80,65 @@ export interface FilteredItem {
   imageUrl: string
 }
 
+export interface Buso {
+  id: number
+  imageUrl: string
+  qty: number
+}
+
+export interface ReservedOrderLineItem {
+  id: number
+  sku: string
+  size: string
+  price: number
+  stockTotal: number
+  stockReserved: number
+  designAssetId: number
+  description: string
+  colorPrimary: string
+  colorSecondary: string
+  hoodieType: string
+  hoodieTypeLabel?: string
+  imageType: string
+  decoId: string
+  decoBase: string
+  imageUrlThumb: string
+  imageUrlMedium: string
+}
+
+export interface ReservedOrderLine {
+  id: number
+  reservedOrderId: number
+  itemId: number
+  qty: number
+  unitPrice: number
+  createdAt: string
+  item: ReservedOrderLineItem
+}
+
+export interface ReservedOrderItem {
+  tipoBuso: string
+  talla: string
+  precioUnitario: number
+  cantidad: number
+  precioTotal: number
+  busos: Buso[]
+}
+
 export interface ReservedOrder {
   id: number
-  status: 'reserved' | 'expired' | 'cancelled' | 'sold'
+  status: 'reserved' | 'expired' | 'cancelled' | 'sold' | 'completed'
   assignedTo: string
   customerName: string | null
   customerPhone?: string | null
   notes?: string | null
+  orderType?: 'Detal' | 'Mayorista'
   createdAt: string
   updatedAt: string
   lineCount?: number
   total?: number
+  lines?: ReservedOrderLine[]
+  items?: ReservedOrderItem[] // Para compatibilidad con el procesamiento agrupado
 }
 
 export interface CreateReservedOrderPayload {
@@ -108,6 +156,10 @@ export interface AddItemToReservedOrderPayload {
 
 export interface ReservedOrdersResponse {
   orders: ReservedOrder[]
+}
+
+export interface SeparatedOrdersResponse {
+  carts: ReservedOrder[]
 }
 
 export type OrderStatus = Order['status']

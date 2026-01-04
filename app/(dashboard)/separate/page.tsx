@@ -1,74 +1,87 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { useCart } from '@/context/CartContext'
-import { useApp } from '@/context/AppContext'
+import { useState, useEffect } from 'react'
 import { Header } from '@/components/layout/Header'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { SeparatedOrderCard } from '@/components/orders/SeparatedOrderCard'
+import { SeparatedOrderDetailModal } from '@/components/orders/SeparatedOrderDetailModal'
+import { BusosBySizeModal } from '@/components/orders/BusosBySizeModal'
 import { EmptyState } from '@/components/common/EmptyState'
-import { formatCurrency } from '@/lib/utils'
-import * as orderService from '@/services/mock/orders'
-import { ShoppingCart, Trash2, Plus, Minus } from 'lucide-react'
+import { LoadingSpinner } from '@/components/common/LoadingSpinner'
+import { ReservedOrder, ReservedOrderItem } from '@/types'
+import { getSeparatedOrders } from '@/services/api/reserved-orders'
 import { toast } from 'sonner'
-import Image from 'next/image'
+import { ShoppingBag } from 'lucide-react'
 
 export default function SeparateOrderPage() {
-  const router = useRouter()
-  const { items, customerName, phone, notes, reservationHours, updateQuantity, removeItem, updateCustomer, updateReservationHours, clearCart, getTotal } = useCart()
-  const { addOrder, refreshOrders } = useApp()
-  const [loading, setLoading] = useState(false)
+  const [orders, setOrders] = useState<ReservedOrder[]>([])
+  const [loading, setLoading] = useState(true)
+  const [selectedOrder, setSelectedOrder] = useState<ReservedOrder | null>(null)
+  const [selectedItem, setSelectedItem] = useState<ReservedOrderItem | null>(null)
+  const [detailModalOpen, setDetailModalOpen] = useState(false)
+  const [busosModalOpen, setBusosModalOpen] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (items.length === 0) {
-      toast.error('El carrito está vacío')
-      return
-    }
-    if (!customerName || !phone) {
-      toast.error('Completa los datos del cliente')
-      return
-    }
+  useEffect(() => {
+    loadOrders()
+  }, [])
 
+  const loadOrders = async () => {
     setLoading(true)
     try {
-      const order = await orderService.createOrder({
-        customerName,
-        phone,
-        notes,
-        items,
-        reservationHours,
+      const separatedOrders = await getSeparatedOrders()
+      
+      // Ordenar: primero reserved, luego cancelled, luego completed
+      const statusOrder: Record<string, number> = {
+        reserved: 0,
+        cancelled: 1,
+        completed: 2,
+        expired: 1,
+        sold: 2,
+      }
+      
+      const sortedOrders = separatedOrders.sort((a, b) => {
+        const statusA = a.status === 'sold' ? 'completed' : a.status
+        const statusB = b.status === 'sold' ? 'completed' : b.status
+        return (statusOrder[statusA] || 99) - (statusOrder[statusB] || 99)
       })
-      addOrder(order)
-      await refreshOrders()
-      clearCart()
-      toast.success('Pedido separado exitosamente')
-      router.push('/orders')
+      
+      setOrders(sortedOrders)
     } catch (error) {
-      console.error('Error creating order:', error)
-      toast.error('Error al crear el pedido')
+      console.error('Error loading separated orders:', error)
+      toast.error(error instanceof Error ? error.message : 'Error al cargar los pedidos separados')
     } finally {
       setLoading(false)
     }
   }
 
-  if (items.length === 0) {
+  const handleViewDetail = (order: ReservedOrder) => {
+    setSelectedOrder(order)
+    setDetailModalOpen(true)
+  }
+
+  const handleViewBusos = (item: ReservedOrderItem) => {
+    setSelectedItem(item)
+    setBusosModalOpen(true)
+  }
+
+  if (loading) {
     return (
       <div>
-        <Header title="Separar Pedido" />
+        <Header title="Pedidos separados" />
+        <div className="flex justify-center items-center min-h-[400px]">
+          <LoadingSpinner />
+        </div>
+      </div>
+    )
+  }
+
+  if (orders.length === 0) {
+    return (
+      <div>
+        <Header title="Pedidos separados" />
         <EmptyState
-          icon={ShoppingCart}
-          title="Carrito vacío"
-          description="Agrega productos desde el inventario"
-          action={
-            <Button onClick={() => router.push('/inventory')}>
-              Ir al Inventario
-            </Button>
-          }
+          icon={ShoppingBag}
+          title="No hay pedidos separados"
+          description="No se encontraron pedidos separados en el sistema"
         />
       </div>
     )
@@ -76,152 +89,29 @@ export default function SeparateOrderPage() {
 
   return (
     <div>
-      <Header title="Separar Pedido" />
-      <div className="max-w-4xl mx-auto space-y-6">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Items del Pedido</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {items.map((item) => (
-                <div
-                  key={`${item.productId}-${item.variantId}`}
-                  className="flex items-center gap-4 p-4 border rounded-lg"
-                >
-                  {item.productImageUrl && (
-                    <div className="relative w-20 h-20 bg-muted rounded-lg overflow-hidden">
-                      <Image
-                        src={item.productImageUrl}
-                        alt={item.productName}
-                        fill
-                        className="object-cover"
-                        sizes="80px"
-                      />
-                    </div>
-                  )}
-                  <div className="flex-1">
-                    <h4 className="font-semibold">{item.productName}</h4>
-                    <p className="text-sm text-muted-foreground">
-                      {item.size} - {item.color}
-                    </p>
-                    <p className="text-sm font-semibold text-primary">
-                      {formatCurrency(item.price)} c/u
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={() => updateQuantity(item.productId, item.variantId, item.quantity - 1)}
-                    >
-                      <Minus className="h-4 w-4" />
-                    </Button>
-                    <span className="w-12 text-center font-semibold">{item.quantity}</span>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={() => updateQuantity(item.productId, item.variantId, item.quantity + 1)}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-semibold">{formatCurrency(item.subtotal)}</p>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeItem(item.productId, item.variantId)}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-              <div className="pt-4 border-t">
-                <div className="flex justify-between text-lg font-bold">
-                  <span>Total:</span>
-                  <span className="text-primary">{formatCurrency(getTotal())}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Datos del Cliente</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="customerName">Nombre del Cliente *</Label>
-                <Input
-                  id="customerName"
-                  value={customerName}
-                  onChange={(e) => updateCustomer(e.target.value, phone)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="phone">Teléfono *</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => updateCustomer(customerName, e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="notes">Notas</Label>
-                <Input
-                  id="notes"
-                  value={notes}
-                  onChange={(e) => updateCustomer(customerName, phone, e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="reservationHours">Tiempo de Reserva</Label>
-                <Select
-                  value={reservationHours.toString()}
-                  onValueChange={(value) => updateReservationHours(parseInt(value))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="24">24 horas</SelectItem>
-                    <SelectItem value="48">48 horas</SelectItem>
-                    <SelectItem value="72">72 horas</SelectItem>
-                    <SelectItem value="168">1 semana</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
-
-          <div className="flex gap-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => router.push('/inventory')}
-              className="flex-1"
-            >
-              Agregar Más Productos
-            </Button>
-            <Button
-              type="submit"
-              disabled={loading}
-              className="flex-1"
-            >
-              {loading ? 'Separando...' : 'Separar Pedido'}
-            </Button>
-          </div>
-        </form>
+      <Header title="Pedidos separados" />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {orders.map((order) => (
+          <SeparatedOrderCard
+            key={order.id}
+            order={order}
+            onViewDetail={handleViewDetail}
+          />
+        ))}
       </div>
+
+      <SeparatedOrderDetailModal
+        open={detailModalOpen}
+        onOpenChange={setDetailModalOpen}
+        order={selectedOrder}
+        onViewBusos={handleViewBusos}
+      />
+
+      <BusosBySizeModal
+        open={busosModalOpen}
+        onOpenChange={setBusosModalOpen}
+        item={selectedItem}
+      />
     </div>
   )
 }
-
