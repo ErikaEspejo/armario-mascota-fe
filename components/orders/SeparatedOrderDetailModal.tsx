@@ -22,10 +22,8 @@ interface SeparatedOrderDetailModalProps {
 
 const statusLabels = {
   reserved: 'Reservado',
-  cancelled: 'Cancelado',
+  canceled: 'Cancelado',
   completed: 'Completado',
-  expired: 'Expirado',
-  sold: 'Vendido',
 }
 
 // Función para convertir código de talla a nombre completo
@@ -115,8 +113,7 @@ export function SeparatedOrderDetailModal({
 
   if (!order) return null
 
-  const status = order.status === 'sold' ? 'completed' : order.status
-  const statusKey = status as keyof typeof statusLabels
+  const statusKey = order.status as keyof typeof statusLabels
   const statusLabel = statusLabels[statusKey] || order.status
 
   const totalQuantity = groupedItems.reduce((sum, item) => sum + item.cantidad, 0)

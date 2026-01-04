@@ -1,10 +1,10 @@
 import { ReservedOrdersResponse, ReservedOrder, CreateReservedOrderPayload, AddItemToReservedOrderPayload, SeparatedOrdersResponse } from '@/types'
 
 /**
- * Obtiene los pedidos separados (reserved, cancelled, completed)
- * @param status - Filtro opcional por estado: 'reserved', 'cancelled', 'completed'
+ * Obtiene los pedidos separados (reserved, canceled, completed)
+ * @param status - Filtro opcional por estado: 'reserved', 'canceled', 'completed'
  */
-export async function getSeparatedOrders(status?: 'reserved' | 'cancelled' | 'completed'): Promise<ReservedOrder[]> {
+export async function getSeparatedOrders(status?: 'reserved' | 'canceled' | 'completed'): Promise<ReservedOrder[]> {
   const urlParams = new URLSearchParams()
   if (status) {
     urlParams.append('status', status)
@@ -186,6 +186,34 @@ export async function updateReservedOrder(
       throw error
     }
     throw new Error('Error desconocido al actualizar el pedido reservado')
+  }
+}
+
+/**
+ * Cancela un pedido reservado
+ */
+export async function cancelReservedOrder(orderId: number): Promise<void> {
+  const url = `/api/reserved-orders/${orderId}/cancel`
+  
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+      const errorMessage = errorData.error || errorData.message || `Error canceling reserved order: ${response.status} ${response.statusText}`
+      throw new Error(errorMessage)
+    }
+  } catch (error) {
+    console.error('Error canceling reserved order:', error)
+    if (error instanceof Error) {
+      throw error
+    }
+    throw new Error('Error desconocido al cancelar el pedido reservado')
   }
 }
 

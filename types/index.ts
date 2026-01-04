@@ -127,7 +127,7 @@ export interface ReservedOrderItem {
 
 export interface ReservedOrder {
   id: number
-  status: 'reserved' | 'expired' | 'cancelled' | 'sold' | 'completed'
+  status: 'reserved' | 'canceled' | 'completed'
   assignedTo: string
   customerName: string | null
   customerPhone?: string | null

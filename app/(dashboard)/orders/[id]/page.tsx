@@ -117,11 +117,11 @@ export default function OrderDetailPage() {
                 <p className="text-muted-foreground mt-1">{order.phone}</p>
               </div>
               <Badge className={`${
-                status === 'reserved' ? 'bg-blue-500' :
-                status === 'pending' ? 'bg-yellow-500' :
-                status === 'sold' ? 'bg-green-500' :
-                status === 'cancelled' ? 'bg-red-500' :
-                'bg-gray-500'
+                status === 'reserved' ? 'bg-blue-100 text-blue-800' :
+                status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                status === 'sold' ? 'bg-green-100 text-green-800' :
+                status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                'bg-gray-100 text-gray-800'
               }`}>
                 {status === 'reserved' ? 'Reservado' :
                  status === 'pending' ? 'Pendiente' :
@@ -201,50 +201,55 @@ export default function OrderDetailPage() {
           </CardContent>
         </Card>
 
-        <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex flex-col gap-4">
           {canEdit && (
             <>
-              <Button
-                onClick={handleSell}
-                className="flex-1"
-                size="lg"
-              >
-                <DollarSign className="h-5 w-5 mr-2" />
-                Vender
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => router.push(`/orders/${order.id}/edit`)}
-                className="flex-1"
-                size="lg"
-              >
-                <Edit className="h-5 w-5 mr-2" />
-                Editar
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleShareQuote}
-                className="flex-1"
-                size="lg"
-              >
-                <Share2 className="h-5 w-5 mr-2" />
-                Compartir Cotización
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={() => setCancelDialogOpen(true)}
-                size="lg"
-              >
-                <X className="h-5 w-5 mr-2" />
-                Cancelar Separación
-              </Button>
+              <div className="flex gap-4">
+                <Button
+                  onClick={handleSell}
+                  className="flex-1"
+                  size="lg"
+                >
+                  <DollarSign className="h-5 w-5 mr-2" />
+                  Vender
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => router.push(`/orders/${order.id}/edit`)}
+                  className="flex-1"
+                  size="lg"
+                >
+                  <Edit className="h-5 w-5 mr-2" />
+                  Editar
+                </Button>
+              </div>
+              <div className="flex gap-4">
+                <Button
+                  variant="outline"
+                  onClick={handleShareQuote}
+                  className="flex-1"
+                  size="lg"
+                >
+                  <Share2 className="h-5 w-5 mr-2" />
+                  Compartir Cotización
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => setCancelDialogOpen(true)}
+                  className="flex-1"
+                  size="lg"
+                >
+                  <X className="h-5 w-5 mr-2" />
+                  Cancelar Separación
+                </Button>
+              </div>
             </>
           )}
           {!canEdit && (
             <Button
               variant="outline"
               onClick={() => router.push('/orders')}
-              className="flex-1"
+              className="w-full"
             >
               Volver a Pedidos
             </Button>

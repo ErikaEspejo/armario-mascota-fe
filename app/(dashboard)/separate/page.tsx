@@ -8,8 +8,9 @@ import { BusosBySizeModal } from '@/components/orders/BusosBySizeModal'
 import { EditReservedOrderModal } from '@/components/orders/EditReservedOrderModal'
 import { EmptyState } from '@/components/common/EmptyState'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
+import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { ReservedOrder, ReservedOrderItem } from '@/types'
-import { getSeparatedOrders } from '@/services/api/reserved-orders'
+import { getSeparatedOrders, cancelReservedOrder } from '@/services/api/reserved-orders'
 import { toast } from 'sonner'
 import { ShoppingBag, ArrowUpDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -22,7 +23,7 @@ import {
 } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
 
-type StatusFilter = 'reserved' | 'cancelled' | 'completed' | 'all'
+type StatusFilter = 'reserved' | 'canceled' | 'completed' | 'all'
 type OrderTypeFilter = 'Detal' | 'Mayorista' | 'all'
 type SortOrder = 'asc' | 'desc' | null
 
@@ -35,6 +36,8 @@ export default function SeparateOrderPage() {
   const [busosModalOpen, setBusosModalOpen] = useState(false)
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [orderToEdit, setOrderToEdit] = useState<ReservedOrder | null>(null)
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
+  const [orderToCancel, setOrderToCancel] = useState<ReservedOrder | null>(null)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [orderTypeFilter, setOrderTypeFilter] = useState<OrderTypeFilter>('all')
   const [sortOrder, setSortOrder] = useState<SortOrder>(null)
@@ -100,19 +103,15 @@ export default function SeparateOrderPage() {
         return sortOrder === 'asc' ? dateA - dateB : dateB - dateA
       })
     } else {
-      // Ordenar por defecto: primero reserved, luego cancelled, luego completed
+      // Ordenar por defecto: primero reserved, luego canceled, luego completed
       const statusOrder: Record<string, number> = {
         reserved: 0,
-        cancelled: 1,
+        canceled: 1,
         completed: 2,
-        expired: 1,
-        sold: 2,
       }
       
       sorted.sort((a, b) => {
-        const statusA = a.status === 'sold' ? 'completed' : a.status
-        const statusB = b.status === 'sold' ? 'completed' : b.status
-        return (statusOrder[statusA] || 99) - (statusOrder[statusB] || 99)
+        return (statusOrder[a.status] || 99) - (statusOrder[b.status] || 99)
       })
     }
     
@@ -152,6 +151,27 @@ export default function SeparateOrderPage() {
     setOrderTypeFilter(value as OrderTypeFilter)
   }
 
+  const handleCancel = (order: ReservedOrder) => {
+    setOrderToCancel(order)
+    setCancelDialogOpen(true)
+  }
+
+  const handleConfirmCancel = async () => {
+    if (!orderToCancel) return
+
+    try {
+      await cancelReservedOrder(orderToCancel.id)
+      toast.success('Pedido cancelado exitosamente')
+      loadOrders()
+    } catch (error) {
+      console.error('Error canceling order:', error)
+      toast.error(error instanceof Error ? error.message : 'Error al cancelar el pedido')
+    } finally {
+      setCancelDialogOpen(false)
+      setOrderToCancel(null)
+    }
+  }
+
   return (
     <div>
       <Header title="Pedidos Separados" />
@@ -168,7 +188,7 @@ export default function SeparateOrderPage() {
               <SelectContent>
                 <SelectItem value="all">Todos</SelectItem>
                 <SelectItem value="reserved">Reservados</SelectItem>
-                <SelectItem value="cancelled">Cancelados</SelectItem>
+                <SelectItem value="canceled">Cancelados</SelectItem>
                 <SelectItem value="completed">Completados</SelectItem>
               </SelectContent>
             </Select>
@@ -221,6 +241,7 @@ export default function SeparateOrderPage() {
               order={order}
               onViewDetail={handleViewDetail}
               onEdit={handleEdit}
+              onCancel={handleCancel}
             />
           ))}
         </div>
@@ -244,6 +265,17 @@ export default function SeparateOrderPage() {
         onOpenChange={setEditModalOpen}
         order={orderToEdit}
         onSuccess={handleEditSuccess}
+      />
+
+      <ConfirmDialog
+        open={cancelDialogOpen}
+        onOpenChange={setCancelDialogOpen}
+        title="Cancelar pedido"
+        description={`¿Estás seguro de que deseas cancelar el pedido #${orderToCancel?.id}? Esta acción no se puede deshacer.`}
+        confirmText="Cancelar pedido"
+        cancelText="No cancelar"
+        onConfirm={handleConfirmCancel}
+        variant="destructive"
       />
     </div>
   )

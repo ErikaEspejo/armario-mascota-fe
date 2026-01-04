@@ -15,11 +15,11 @@ interface OrderCardProps {
 }
 
 const statusColors = {
-  pending: 'bg-yellow-500',
-  reserved: 'bg-blue-500',
-  expired: 'bg-gray-500',
-  cancelled: 'bg-red-500',
-  sold: 'bg-green-500',
+  pending: 'bg-yellow-100 text-yellow-800',
+  reserved: 'bg-blue-100 text-blue-800',
+  expired: 'bg-gray-100 text-gray-800',
+  cancelled: 'bg-red-100 text-red-800',
+  sold: 'bg-green-100 text-green-800',
 }
 
 const statusLabels = {
@@ -79,18 +79,18 @@ export function OrderCard({ order, onSell, onCancel }: OrderCardProps) {
           </p>
         )}
       </CardContent>
-      <CardFooter className="flex gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          className="flex-1"
-          onClick={() => router.push(`/orders/${order.id}`)}
-        >
-          <Eye className="h-4 w-4 mr-2" />
-          Abrir
-        </Button>
-        {status === 'reserved' && (
-          <>
+      <CardFooter className="flex flex-col gap-2">
+        <div className="flex gap-2 w-full">
+          <Button
+            variant="outline"
+            size="sm"
+            className={status === 'reserved' ? "flex-1" : "w-full"}
+            onClick={() => router.push(`/orders/${order.id}`)}
+          >
+            <Eye className="h-4 w-4 mr-2" />
+            Abrir
+          </Button>
+          {status === 'reserved' && (
             <Button
               size="sm"
               className="flex-1"
@@ -99,14 +99,18 @@ export function OrderCard({ order, onSell, onCancel }: OrderCardProps) {
               <DollarSign className="h-4 w-4 mr-2" />
               Vender
             </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => onCancel?.(order)}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </>
+          )}
+        </div>
+        {status === 'reserved' && (
+          <Button
+            variant="destructive"
+            size="sm"
+            className="w-full"
+            onClick={() => onCancel?.(order)}
+          >
+            <X className="h-4 w-4 mr-2" />
+            Cancelar
+          </Button>
         )}
       </CardFooter>
     </Card>

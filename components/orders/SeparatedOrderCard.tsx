@@ -5,28 +5,25 @@ import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { formatCurrency } from '@/lib/utils'
-import { Eye, Pencil } from 'lucide-react'
+import { Eye, Pencil, X } from 'lucide-react'
 
 interface SeparatedOrderCardProps {
   order: ReservedOrder
   onViewDetail: (order: ReservedOrder) => void
   onEdit?: (order: ReservedOrder) => void
+  onCancel?: (order: ReservedOrder) => void
 }
 
 const statusColors = {
-  reserved: 'bg-yellow-500 text-yellow-900',
-  cancelled: 'bg-gray-500 text-gray-900',
-  completed: 'bg-green-500 text-green-900',
-  expired: 'bg-gray-500 text-gray-900',
-  sold: 'bg-green-500 text-green-900',
+  reserved: 'bg-yellow-100 text-yellow-800',
+  canceled: 'bg-gray-100 text-gray-800',
+  completed: 'bg-green-100 text-green-800',
 }
 
 const statusLabels = {
   reserved: 'Reservado',
-  cancelled: 'Cancelado',
+  canceled: 'Cancelado',
   completed: 'Completado',
-  expired: 'Expirado',
-  sold: 'Vendido',
 }
 
 function capitalizeWords(str: string | null | undefined): string {
@@ -37,11 +34,10 @@ function capitalizeWords(str: string | null | undefined): string {
     .join(' ')
 }
 
-export function SeparatedOrderCard({ order, onViewDetail, onEdit }: SeparatedOrderCardProps) {
-  const status = order.status === 'sold' ? 'completed' : order.status
-  const statusKey = status as keyof typeof statusLabels
-  const statusLabel = statusLabels[statusKey] || status
-  const statusColor = statusColors[statusKey] || 'bg-gray-500 text-gray-900'
+export function SeparatedOrderCard({ order, onViewDetail, onEdit, onCancel }: SeparatedOrderCardProps) {
+  const statusKey = order.status as keyof typeof statusLabels
+  const statusLabel = statusLabels[statusKey] || order.status
+  const statusColor = statusColors[statusKey] || 'bg-gray-100 text-gray-800'
   const orderType = capitalizeWords(order.orderType)
   
   return (
@@ -74,27 +70,40 @@ export function SeparatedOrderCard({ order, onViewDetail, onEdit }: SeparatedOrd
           </div>
         </div>
       </CardContent>
-      <CardFooter className="flex gap-2">
-        {order.status === 'reserved' && onEdit && (
+      <CardFooter className="flex flex-col gap-2">
+        <div className="flex gap-2 w-full">
           <Button
             variant="outline"
             size="sm"
-            onClick={() => onEdit(order)}
-            className="flex-1"
+            className={order.status === 'reserved' && onEdit ? "flex-1" : "w-full"}
+            onClick={() => onViewDetail(order)}
           >
-            <Pencil className="h-4 w-4 mr-2" />
-            Editar
+            <Eye className="h-4 w-4 mr-2" />
+            Ver detalle
+          </Button>
+          {order.status === 'reserved' && onEdit && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onEdit(order)}
+              className="flex-1"
+            >
+              <Pencil className="h-4 w-4 mr-2" />
+              Editar
+            </Button>
+          )}
+        </div>
+        {order.status === 'reserved' && onCancel && (
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => onCancel(order)}
+            className="w-full"
+          >
+            <X className="h-4 w-4 mr-2" />
+            Cancelar
           </Button>
         )}
-        <Button
-          variant="outline"
-          size="sm"
-          className={order.status === 'reserved' && onEdit ? "flex-1" : "w-full"}
-          onClick={() => onViewDetail(order)}
-        >
-          <Eye className="h-4 w-4 mr-2" />
-          Ver detalle
-        </Button>
       </CardFooter>
     </Card>
   )
