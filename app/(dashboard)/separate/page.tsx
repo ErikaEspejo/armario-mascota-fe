@@ -11,7 +11,20 @@ import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { ReservedOrder, ReservedOrderItem } from '@/types'
 import { getSeparatedOrders } from '@/services/api/reserved-orders'
 import { toast } from 'sonner'
-import { ShoppingBag } from 'lucide-react'
+import { ShoppingBag, ArrowUpDown } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Label } from '@/components/ui/label'
+
+type StatusFilter = 'reserved' | 'cancelled' | 'completed' | 'all'
+type OrderTypeFilter = 'Detal' | 'Mayorista' | 'all'
+type SortOrder = 'asc' | 'desc' | null
 
 export default function SeparateOrderPage() {
   const [orders, setOrders] = useState<ReservedOrder[]>([])
@@ -22,17 +35,72 @@ export default function SeparateOrderPage() {
   const [busosModalOpen, setBusosModalOpen] = useState(false)
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [orderToEdit, setOrderToEdit] = useState<ReservedOrder | null>(null)
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [orderTypeFilter, setOrderTypeFilter] = useState<OrderTypeFilter>('all')
+  const [sortOrder, setSortOrder] = useState<SortOrder>(null)
+  const [allOrders, setAllOrders] = useState<ReservedOrder[]>([])
 
   useEffect(() => {
     loadOrders()
-  }, [])
+  }, [statusFilter])
+
+  useEffect(() => {
+    // Aplicar filtros y ordenamiento cuando cambian orderTypeFilter, sortOrder o allOrders
+    applyFiltersAndSorting()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderTypeFilter, sortOrder, allOrders])
 
   const loadOrders = async () => {
     setLoading(true)
     try {
-      const separatedOrders = await getSeparatedOrders()
+      const filterStatus = statusFilter === 'all' ? undefined : statusFilter
+      const separatedOrders = await getSeparatedOrders(filterStatus)
       
-      // Ordenar: primero reserved, luego cancelled, luego completed
+      setAllOrders(separatedOrders)
+    } catch (error) {
+      console.error('Error loading separated orders:', error)
+      toast.error(error instanceof Error ? error.message : 'Error al cargar los pedidos separados')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const applyFiltersAndSorting = () => {
+    let filtered = [...allOrders]
+    
+    // Aplicar filtro de tipo de pedido (frontend)
+    if (orderTypeFilter !== 'all') {
+      filtered = filtered.filter(order => {
+        const orderType = order.orderType
+        
+        // Si no tiene orderType, no coincide
+        if (!orderType) {
+          return false
+        }
+        
+        // Comparación exacta
+        return orderType === orderTypeFilter
+      })
+    }
+    
+    // Aplicar ordenamiento
+    const sorted = applySorting(filtered)
+    
+    setOrders(sorted)
+  }
+
+  const applySorting = (ordersToSort: ReservedOrder[]): ReservedOrder[] => {
+    const sorted = [...ordersToSort]
+    
+    if (sortOrder) {
+      // Ordenar por fecha
+      sorted.sort((a, b) => {
+        const dateA = new Date(a.createdAt).getTime()
+        const dateB = new Date(b.createdAt).getTime()
+        return sortOrder === 'asc' ? dateA - dateB : dateB - dateA
+      })
+    } else {
+      // Ordenar por defecto: primero reserved, luego cancelled, luego completed
       const statusOrder: Record<string, number> = {
         reserved: 0,
         cancelled: 1,
@@ -41,18 +109,23 @@ export default function SeparateOrderPage() {
         sold: 2,
       }
       
-      const sortedOrders = separatedOrders.sort((a, b) => {
+      sorted.sort((a, b) => {
         const statusA = a.status === 'sold' ? 'completed' : a.status
         const statusB = b.status === 'sold' ? 'completed' : b.status
         return (statusOrder[statusA] || 99) - (statusOrder[statusB] || 99)
       })
-      
-      setOrders(sortedOrders)
-    } catch (error) {
-      console.error('Error loading separated orders:', error)
-      toast.error(error instanceof Error ? error.message : 'Error al cargar los pedidos separados')
-    } finally {
-      setLoading(false)
+    }
+    
+    return sorted
+  }
+
+  const handleSortToggle = () => {
+    if (sortOrder === null) {
+      setSortOrder('desc') // Primero más recientes
+    } else if (sortOrder === 'desc') {
+      setSortOrder('asc') // Más antiguos primero
+    } else {
+      setSortOrder(null) // Sin ordenamiento
     }
   }
 
@@ -75,43 +148,83 @@ export default function SeparateOrderPage() {
     loadOrders()
   }
 
-  if (loading) {
-    return (
-      <div>
-        <Header title="Pedidos Separados" />
-        <div className="flex justify-center items-center min-h-[400px]">
-          <LoadingSpinner />
-        </div>
-      </div>
-    )
-  }
-
-  if (orders.length === 0) {
-    return (
-      <div>
-        <Header title="Pedidos Separados" />
-        <EmptyState
-          icon={ShoppingBag}
-          title="No hay pedidos separados"
-          description="No se encontraron pedidos separados en el sistema"
-        />
-      </div>
-    )
+  const handleOrderTypeFilterChange = (value: string) => {
+    setOrderTypeFilter(value as OrderTypeFilter)
   }
 
   return (
     <div>
       <Header title="Pedidos Separados" />
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {orders.map((order) => (
-          <SeparatedOrderCard
-            key={order.id}
-            order={order}
-            onViewDetail={handleViewDetail}
-            onEdit={handleEdit}
-          />
-        ))}
+      
+      {/* Filtros y controles */}
+      <div className="mb-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center w-full sm:w-auto">
+          <div className="flex items-center gap-2">
+            <Label htmlFor="status-filter" className="whitespace-nowrap">Filtrar por estado:</Label>
+            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as StatusFilter)}>
+              <SelectTrigger id="status-filter" className="w-[180px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="reserved">Reservados</SelectItem>
+                <SelectItem value="cancelled">Cancelados</SelectItem>
+                <SelectItem value="completed">Completados</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-2">
+            <Label htmlFor="order-type-filter" className="whitespace-nowrap">Filtrar por tipo:</Label>
+            <Select 
+              value={orderTypeFilter} 
+              onValueChange={handleOrderTypeFilterChange}
+            >
+              <SelectTrigger id="order-type-filter" className="w-[180px]">
+                <SelectValue placeholder="Seleccionar tipo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="Detal">Detal</SelectItem>
+                <SelectItem value="Mayorista">Mayorista</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        
+        <Button
+          variant="outline"
+          onClick={handleSortToggle}
+          className="w-full sm:w-auto"
+        >
+          <ArrowUpDown className="h-4 w-4 mr-2" />
+          {sortOrder === null && 'Ordenar por fecha'}
+          {sortOrder === 'desc' && 'Más recientes primero'}
+          {sortOrder === 'asc' && 'Más antiguos primero'}
+        </Button>
       </div>
+
+      {loading ? (
+        <div className="flex justify-center items-center min-h-[400px]">
+          <LoadingSpinner />
+        </div>
+      ) : orders.length === 0 ? (
+        <EmptyState
+          icon={ShoppingBag}
+          title="No hay pedidos separados"
+          description="No se encontraron pedidos separados con los filtros seleccionados"
+        />
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {orders.map((order) => (
+            <SeparatedOrderCard
+              key={order.id}
+              order={order}
+              onViewDetail={handleViewDetail}
+              onEdit={handleEdit}
+            />
+          ))}
+        </div>
+      )}
 
       <SeparatedOrderDetailModal
         open={detailModalOpen}

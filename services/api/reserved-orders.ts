@@ -2,9 +2,16 @@ import { ReservedOrdersResponse, ReservedOrder, CreateReservedOrderPayload, AddI
 
 /**
  * Obtiene los pedidos separados (reserved, cancelled, completed)
+ * @param status - Filtro opcional por estado: 'reserved', 'cancelled', 'completed'
  */
-export async function getSeparatedOrders(): Promise<ReservedOrder[]> {
-  const url = '/api/reserved-orders/separated'
+export async function getSeparatedOrders(status?: 'reserved' | 'cancelled' | 'completed'): Promise<ReservedOrder[]> {
+  const urlParams = new URLSearchParams()
+  if (status) {
+    urlParams.append('status', status)
+  }
+  
+  const queryString = urlParams.toString()
+  const url = queryString ? `/api/reserved-orders/separated?${queryString}` : '/api/reserved-orders/separated'
   
   try {
     const response = await fetch(url, {
@@ -138,7 +145,7 @@ export interface UpdateReservedOrderPayload {
   id: number
   status: 'reserved'
   assignedTo: string
-  orderType: 'retail' | 'Mayorista'
+  orderType: 'Detal' | 'Mayorista'
   customerName: string
   customerPhone: string
   notes: string

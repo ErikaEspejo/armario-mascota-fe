@@ -11,17 +11,24 @@ export async function PUT(
     const orderId = params.id
     const body = await request.json()
     
+    // Mapear orderType: 'Detal' -> 'retail' para el backend
+    const backendBody = {
+      ...body,
+      orderType: body.orderType === 'Detal' ? 'retail' : body.orderType,
+    }
+    
     const backendUrl = `${ADMIN_API_BASE_URL}${RESERVED_ORDERS_ENDPOINT}/${orderId}`
     
     console.log('🔵 [API Route] Proxying PUT reserved order request to:', backendUrl)
     console.log('🔵 [API Route] Request body:', body)
+    console.log('🔵 [API Route] Backend body:', backendBody)
     
     const response = await fetch(backendUrl, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify(backendBody),
     })
 
     console.log('🔵 [API Route] Response status:', response.status)

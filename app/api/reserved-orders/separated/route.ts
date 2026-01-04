@@ -3,10 +3,19 @@ import { NextRequest, NextResponse } from 'next/server'
 const ADMIN_API_BASE_URL = 'http://localhost:8080'
 const SEPARATED_ORDERS_ENDPOINT = '/admin/reserved-orders/separated'
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
-    const backendUrl = `${ADMIN_API_BASE_URL}${SEPARATED_ORDERS_ENDPOINT}`
+    const searchParams = request.nextUrl.searchParams
+    const status = searchParams.get('status')
+    
+    // Construir URL del backend con parámetros
+    const backendParams = new URLSearchParams()
+    if (status) backendParams.append('status', status)
+    
+    const queryString = backendParams.toString()
+    const backendUrl = queryString 
+      ? `${ADMIN_API_BASE_URL}${SEPARATED_ORDERS_ENDPOINT}?${queryString}`
+      : `${ADMIN_API_BASE_URL}${SEPARATED_ORDERS_ENDPOINT}`
     
     console.log('🔵 [API Route] Proxying GET separated orders request to:', backendUrl)
     

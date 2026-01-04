@@ -41,7 +41,7 @@ export function EditReservedOrderModal({
   const [customerName, setCustomerName] = useState('')
   const [customerPhone, setCustomerPhone] = useState('')
   const [notes, setNotes] = useState('')
-  const [orderType, setOrderType] = useState<'retail' | 'Mayorista'>('retail')
+  const [orderType, setOrderType] = useState<'Detal' | 'Mayorista'>('Detal')
   const [lines, setLines] = useState<Array<{ id: number; reservedOrderId: number; itemId: number; qty: number }>>([])
   const [loading, setLoading] = useState(false)
 
@@ -53,8 +53,8 @@ export function EditReservedOrderModal({
       setCustomerPhone(order.customerPhone || '')
       setNotes(order.notes || '')
       
-      // Mapear orderType: 'Detal' -> 'retail', 'Mayorista' -> 'Mayorista'
-      const mappedOrderType = order.orderType === 'Detal' ? 'retail' : (order.orderType === 'Mayorista' ? 'Mayorista' : 'retail')
+      // Usar el orderType directamente (Detal o Mayorista)
+      const mappedOrderType = order.orderType === 'Detal' ? 'Detal' : (order.orderType === 'Mayorista' ? 'Mayorista' : 'Detal')
       setOrderType(mappedOrderType)
       
       // Inicializar lines desde order.lines
@@ -74,7 +74,7 @@ export function EditReservedOrderModal({
       setCustomerName('')
       setCustomerPhone('')
       setNotes('')
-      setOrderType('retail')
+      setOrderType('Detal')
       setLines([])
     }
   }, [order, open])
@@ -143,12 +143,12 @@ export function EditReservedOrderModal({
             </div>
             <div className="space-y-2">
               <Label htmlFor="orderType">Tipo de pedido</Label>
-              <Select value={orderType} onValueChange={(value) => setOrderType(value as 'retail' | 'Mayorista')}>
+              <Select value={orderType} onValueChange={(value) => setOrderType(value as 'Detal' | 'Mayorista')}>
                 <SelectTrigger id="orderType">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="retail">Detal</SelectItem>
+                  <SelectItem value="Detal">Detal</SelectItem>
                   <SelectItem value="Mayorista">Mayorista</SelectItem>
                 </SelectContent>
               </Select>
