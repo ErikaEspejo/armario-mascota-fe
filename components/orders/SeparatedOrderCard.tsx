@@ -5,13 +5,14 @@ import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { formatCurrency } from '@/lib/utils'
-import { Eye, Pencil, X } from 'lucide-react'
+import { Eye, Pencil, X, DollarSign } from 'lucide-react'
 
 interface SeparatedOrderCardProps {
   order: ReservedOrder
   onViewDetail: (order: ReservedOrder) => void
   onEdit?: (order: ReservedOrder) => void
   onCancel?: (order: ReservedOrder) => void
+  onSell?: (order: ReservedOrder) => void
 }
 
 const statusColors = {
@@ -34,7 +35,7 @@ function capitalizeWords(str: string | null | undefined): string {
     .join(' ')
 }
 
-export function SeparatedOrderCard({ order, onViewDetail, onEdit, onCancel }: SeparatedOrderCardProps) {
+export function SeparatedOrderCard({ order, onViewDetail, onEdit, onCancel, onSell }: SeparatedOrderCardProps) {
   const statusKey = order.status as keyof typeof statusLabels
   const statusLabel = statusLabels[statusKey] || order.status
   const statusColor = statusColors[statusKey] || 'bg-gray-100 text-gray-800'
@@ -75,7 +76,7 @@ export function SeparatedOrderCard({ order, onViewDetail, onEdit, onCancel }: Se
           <Button
             variant="outline"
             size="sm"
-            className={order.status === 'reserved' && onEdit ? "flex-1" : "w-full"}
+            className={order.status === 'reserved' && (onEdit || onSell) ? "flex-1" : "w-full"}
             onClick={() => onViewDetail(order)}
           >
             <Eye className="h-4 w-4 mr-2" />
@@ -93,6 +94,17 @@ export function SeparatedOrderCard({ order, onViewDetail, onEdit, onCancel }: Se
             </Button>
           )}
         </div>
+        {order.status === 'reserved' && onSell && (
+          <Button
+            variant="default"
+            size="sm"
+            onClick={() => onSell(order)}
+            className="w-full bg-green-600 hover:bg-green-700"
+          >
+            <DollarSign className="h-4 w-4 mr-2" />
+            Vender
+          </Button>
+        )}
         {order.status === 'reserved' && onCancel && (
           <Button
             variant="destructive"

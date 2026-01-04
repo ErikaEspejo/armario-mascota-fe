@@ -6,6 +6,7 @@ import { SeparatedOrderCard } from '@/components/orders/SeparatedOrderCard'
 import { SeparatedOrderDetailModal } from '@/components/orders/SeparatedOrderDetailModal'
 import { BusosBySizeModal } from '@/components/orders/BusosBySizeModal'
 import { EditReservedOrderModal } from '@/components/orders/EditReservedOrderModal'
+import { SellReservedOrderModal } from '@/components/orders/SellReservedOrderModal'
 import { EmptyState } from '@/components/common/EmptyState'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
@@ -36,6 +37,8 @@ export default function SeparateOrderPage() {
   const [busosModalOpen, setBusosModalOpen] = useState(false)
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [orderToEdit, setOrderToEdit] = useState<ReservedOrder | null>(null)
+  const [sellModalOpen, setSellModalOpen] = useState(false)
+  const [orderToSell, setOrderToSell] = useState<ReservedOrder | null>(null)
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
   const [orderToCancel, setOrderToCancel] = useState<ReservedOrder | null>(null)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
@@ -147,6 +150,15 @@ export default function SeparateOrderPage() {
     loadOrders()
   }
 
+  const handleSell = (order: ReservedOrder) => {
+    setOrderToSell(order)
+    setSellModalOpen(true)
+  }
+
+  const handleSellSuccess = () => {
+    loadOrders()
+  }
+
   const handleOrderTypeFilterChange = (value: string) => {
     setOrderTypeFilter(value as OrderTypeFilter)
   }
@@ -242,6 +254,7 @@ export default function SeparateOrderPage() {
               onViewDetail={handleViewDetail}
               onEdit={handleEdit}
               onCancel={handleCancel}
+              onSell={handleSell}
             />
           ))}
         </div>
@@ -265,6 +278,13 @@ export default function SeparateOrderPage() {
         onOpenChange={setEditModalOpen}
         order={orderToEdit}
         onSuccess={handleEditSuccess}
+      />
+
+      <SellReservedOrderModal
+        open={sellModalOpen}
+        onOpenChange={setSellModalOpen}
+        order={orderToSell}
+        onSuccess={handleSellSuccess}
       />
 
       <ConfirmDialog

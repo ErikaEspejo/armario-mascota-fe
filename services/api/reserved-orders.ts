@@ -217,3 +217,53 @@ export async function cancelReservedOrder(orderId: number): Promise<void> {
   }
 }
 
+/**
+ * Vende un pedido reservado
+ */
+export interface SellReservedOrderPayload {
+  amountPaid: number // Requerido: número entero > 0 (COP)
+  paymentMethod: 'cash' | 'transfer' // Requerido: "cash", "transfer"
+  paymentDestination: 'Cash' | 'Nequi' | 'Daviplata' // Requerido: "Cash" "Nequi", "Daviplata"
+  notes?: string // Opcional: string
+}
+
+export async function sellReservedOrder(
+  orderId: number,
+  payload: SellReservedOrderPayload
+): Promise<void> {
+  const url = `/api/reserved-orders/${orderId}/sell`
+  
+  // Validaciones
+  if (!payload.amountPaid || payload.amountPaid <= 0) {
+    throw new Error('El total pagado debe ser un número entero mayor a 0')
+  }
+  if (!payload.paymentMethod || !['cash', 'transfer'].includes(payload.paymentMethod)) {
+    throw new Error('El método de pago debe ser "cash" o "transfer"')
+  }
+  if (!payload.paymentDestination || !['Cash', 'Nequi', 'Daviplata'].includes(payload.paymentDestination)) {
+    throw new Error('El destino de pago debe ser "Cash", "Nequi", o "Daviplata"')
+  }
+  
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+      const errorMessage = errorData.error || errorData.message || `Error selling reserved order: ${response.status} ${response.statusText}`
+      throw new Error(errorMessage)
+    }
+  } catch (error) {
+    console.error('Error selling reserved order:', error)
+    if (error instanceof Error) {
+      throw error
+    }
+    throw new Error('Error desconocido al vender el pedido reservado')
+  }
+}
+
