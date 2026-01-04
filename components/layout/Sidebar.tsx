@@ -17,7 +17,7 @@ const navItems = [
   { href: '/', label: 'Inicio', icon: Home },
   { href: '/products', label: 'Productos', icon: Boxes },
   { href: '/inventory', label: 'Inventario', icon: Package },
-  { href: '/separate', label: 'Separar Pedido', icon: ShoppingCart },
+  { href: '/separate', label: 'Pedidos Separados', icon: ShoppingCart },
   { href: '/orders', label: 'Pedidos', icon: FileText },
   { href: '/sell', label: 'Vender', icon: DollarSign },
   { href: '/sales', label: 'Ventas', icon: DollarSign },

@@ -131,3 +131,54 @@ export async function addItemToReservedOrder(
   }
 }
 
+/**
+ * Actualiza un pedido reservado
+ */
+export interface UpdateReservedOrderPayload {
+  id: number
+  status: 'reserved'
+  assignedTo: string
+  orderType: 'retail' | 'Mayorista'
+  customerName: string
+  customerPhone: string
+  notes: string
+  lines: Array<{
+    id: number
+    reservedOrderId: number
+    itemId: number
+    qty: number
+  }>
+}
+
+export async function updateReservedOrder(
+  orderId: number,
+  payload: UpdateReservedOrderPayload
+): Promise<ReservedOrder> {
+  const url = `/api/reserved-orders/${orderId}`
+  
+  try {
+    const response = await fetch(url, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+      const errorMessage = errorData.error || errorData.message || `Error updating reserved order: ${response.status} ${response.statusText}`
+      throw new Error(errorMessage)
+    }
+
+    const data: ReservedOrder = await response.json()
+    return data
+  } catch (error) {
+    console.error('Error updating reserved order:', error)
+    if (error instanceof Error) {
+      throw error
+    }
+    throw new Error('Error desconocido al actualizar el pedido reservado')
+  }
+}
+

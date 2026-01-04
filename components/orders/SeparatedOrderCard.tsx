@@ -5,11 +5,12 @@ import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { formatCurrency } from '@/lib/utils'
-import { Eye } from 'lucide-react'
+import { Eye, Pencil } from 'lucide-react'
 
 interface SeparatedOrderCardProps {
   order: ReservedOrder
   onViewDetail: (order: ReservedOrder) => void
+  onEdit?: (order: ReservedOrder) => void
 }
 
 const statusColors = {
@@ -36,7 +37,7 @@ function capitalizeWords(str: string | null | undefined): string {
     .join(' ')
 }
 
-export function SeparatedOrderCard({ order, onViewDetail }: SeparatedOrderCardProps) {
+export function SeparatedOrderCard({ order, onViewDetail, onEdit }: SeparatedOrderCardProps) {
   const status = order.status === 'sold' ? 'completed' : order.status
   const statusKey = status as keyof typeof statusLabels
   const statusLabel = statusLabels[statusKey] || status
@@ -73,11 +74,22 @@ export function SeparatedOrderCard({ order, onViewDetail }: SeparatedOrderCardPr
           </div>
         </div>
       </CardContent>
-      <CardFooter>
+      <CardFooter className="flex gap-2">
+        {order.status === 'reserved' && onEdit && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onEdit(order)}
+            className="flex-1"
+          >
+            <Pencil className="h-4 w-4 mr-2" />
+            Editar
+          </Button>
+        )}
         <Button
           variant="outline"
           size="sm"
-          className="w-full"
+          className={order.status === 'reserved' && onEdit ? "flex-1" : "w-full"}
           onClick={() => onViewDetail(order)}
         >
           <Eye className="h-4 w-4 mr-2" />

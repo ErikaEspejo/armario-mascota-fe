@@ -5,6 +5,7 @@ import { Header } from '@/components/layout/Header'
 import { SeparatedOrderCard } from '@/components/orders/SeparatedOrderCard'
 import { SeparatedOrderDetailModal } from '@/components/orders/SeparatedOrderDetailModal'
 import { BusosBySizeModal } from '@/components/orders/BusosBySizeModal'
+import { EditReservedOrderModal } from '@/components/orders/EditReservedOrderModal'
 import { EmptyState } from '@/components/common/EmptyState'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { ReservedOrder, ReservedOrderItem } from '@/types'
@@ -19,6 +20,8 @@ export default function SeparateOrderPage() {
   const [selectedItem, setSelectedItem] = useState<ReservedOrderItem | null>(null)
   const [detailModalOpen, setDetailModalOpen] = useState(false)
   const [busosModalOpen, setBusosModalOpen] = useState(false)
+  const [editModalOpen, setEditModalOpen] = useState(false)
+  const [orderToEdit, setOrderToEdit] = useState<ReservedOrder | null>(null)
 
   useEffect(() => {
     loadOrders()
@@ -63,10 +66,19 @@ export default function SeparateOrderPage() {
     setBusosModalOpen(true)
   }
 
+  const handleEdit = (order: ReservedOrder) => {
+    setOrderToEdit(order)
+    setEditModalOpen(true)
+  }
+
+  const handleEditSuccess = () => {
+    loadOrders()
+  }
+
   if (loading) {
     return (
       <div>
-        <Header title="Pedidos separados" />
+        <Header title="Pedidos Separados" />
         <div className="flex justify-center items-center min-h-[400px]">
           <LoadingSpinner />
         </div>
@@ -77,7 +89,7 @@ export default function SeparateOrderPage() {
   if (orders.length === 0) {
     return (
       <div>
-        <Header title="Pedidos separados" />
+        <Header title="Pedidos Separados" />
         <EmptyState
           icon={ShoppingBag}
           title="No hay pedidos separados"
@@ -89,13 +101,14 @@ export default function SeparateOrderPage() {
 
   return (
     <div>
-      <Header title="Pedidos separados" />
+      <Header title="Pedidos Separados" />
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {orders.map((order) => (
           <SeparatedOrderCard
             key={order.id}
             order={order}
             onViewDetail={handleViewDetail}
+            onEdit={handleEdit}
           />
         ))}
       </div>
@@ -111,6 +124,13 @@ export default function SeparateOrderPage() {
         open={busosModalOpen}
         onOpenChange={setBusosModalOpen}
         item={selectedItem}
+      />
+
+      <EditReservedOrderModal
+        open={editModalOpen}
+        onOpenChange={setEditModalOpen}
+        order={orderToEdit}
+        onSuccess={handleEditSuccess}
       />
     </div>
   )
