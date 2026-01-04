@@ -161,7 +161,7 @@ function InventoryPageContent() {
   if (loading) {
     return (
       <div>
-        <Header title="Inventario" showSearch={false} />
+        <Header title="Inventario" />
         <div className="flex justify-center items-center min-h-[400px]">
           <LoadingSpinner size="lg" />
         </div>
@@ -171,7 +171,7 @@ function InventoryPageContent() {
 
   return (
     <div>
-      <Header title="Inventario" showSearch={false} />
+      <Header title="Inventario" />
       <div className="space-y-6">
         <div className="hidden md:block">
           <h1 className="text-3xl font-bold mb-2">Inventario</h1>
@@ -238,7 +238,7 @@ export default function InventoryPage() {
   return (
     <Suspense fallback={
       <div>
-        <Header title="Inventario" showSearch />
+        <Header title="Inventario" />
         <div className="flex justify-center items-center min-h-[400px]">
           <LoadingSpinner size="lg" />
         </div>

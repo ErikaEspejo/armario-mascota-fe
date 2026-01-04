@@ -2,7 +2,6 @@
 
 import { useRouter } from 'next/navigation'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { SearchBar } from '@/components/common/SearchBar'
 import { Header } from '@/components/layout/Header'
 import {
   ShoppingCart,
@@ -15,14 +14,6 @@ import {
 
 export default function HomePage() {
   const router = useRouter()
-
-  const handleSearch = (query: string) => {
-    if (query.trim()) {
-      router.push(`/inventory?search=${encodeURIComponent(query.trim())}`)
-    } else {
-      router.push('/inventory')
-    }
-  }
 
   const quickActions = [
     {
@@ -71,21 +62,13 @@ export default function HomePage() {
 
   return (
     <div>
-      <Header title="Inicio" showSearch />
+      <Header title="Inicio" />
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="hidden md:block">
           <h1 className="text-3xl font-bold mb-2">Bienvenido</h1>
           <p className="text-muted-foreground mb-6">
             Accede rápidamente a las funciones principales
           </p>
-        </div>
-
-        <div className="mb-8">
-          <SearchBar
-            onSearch={handleSearch}
-            placeholder="Buscar por SKU o nombre de producto..."
-            className="max-w-2xl"
-          />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
