@@ -7,11 +7,10 @@ import { Header } from '@/components/layout/Header'
 import {
   ShoppingCart,
   Package,
-  FileText,
   DollarSign,
   BookOpen,
-  Search,
   Boxes,
+  TrendingUp,
 } from 'lucide-react'
 
 export default function HomePage() {
@@ -34,46 +33,39 @@ export default function HomePage() {
       color: 'bg-indigo-500',
     },
     {
-      title: 'Separar Pedido',
-      description: 'Crear un nuevo pedido separado',
-      icon: ShoppingCart,
-      href: '/separate',
-      color: 'bg-blue-500',
-    },
-    {
-      title: 'Buscar Producto',
-      description: 'Buscar en el inventario',
-      icon: Search,
-      href: '/inventory',
-      color: 'bg-green-500',
-    },
-    {
-      title: 'Pedidos Separados',
-      description: 'Ver pedidos pendientes',
-      icon: FileText,
-      href: '/orders',
-      color: 'bg-orange-500',
-    },
-    {
-      title: 'Nueva Venta',
-      description: 'Procesar una venta',
-      icon: DollarSign,
-      href: '/sell',
-      color: 'bg-purple-500',
-    },
-    {
-      title: 'Catálogos Recientes',
-      description: 'Ver catálogos generados',
-      icon: BookOpen,
-      href: '/catalogs',
-      color: 'bg-pink-500',
-    },
-    {
       title: 'Inventario',
       description: 'Ver productos disponibles',
       icon: Package,
       href: '/inventory',
       color: 'bg-teal-500',
+    },
+    {
+      title: 'Pedidos',
+      description: 'Gestionar pedidos',
+      icon: ShoppingCart,
+      href: '/separate',
+      color: 'bg-blue-500',
+    },
+    {
+      title: 'Ventas',
+      description: 'Ver ventas realizadas',
+      icon: DollarSign,
+      href: '/sales',
+      color: 'bg-green-500',
+    },
+    {
+      title: 'Finanzas',
+      description: 'Gestionar información financiera',
+      icon: TrendingUp,
+      href: '/finances',
+      color: 'bg-purple-500',
+    },
+    {
+      title: 'Catálogos',
+      description: 'Ver catálogos generados',
+      icon: BookOpen,
+      href: '/catalogs',
+      color: 'bg-pink-500',
     },
   ]
 

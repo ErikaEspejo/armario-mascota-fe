@@ -62,7 +62,7 @@ export default function SeparateOrderPage() {
       setAllOrders(separatedOrders)
     } catch (error) {
       console.error('Error loading separated orders:', error)
-      toast.error(error instanceof Error ? error.message : 'Error al cargar los pedidos separados')
+      toast.error(error instanceof Error ? error.message : 'Error al cargar los pedidos')
     } finally {
       setLoading(false)
     }
@@ -174,7 +174,7 @@ export default function SeparateOrderPage() {
 
   return (
     <div>
-      <Header title="Pedidos Separados" />
+      <Header title="Pedidos" />
       
       {/* Filtros y controles */}
       <div className="mb-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
@@ -230,8 +230,8 @@ export default function SeparateOrderPage() {
       ) : orders.length === 0 ? (
         <EmptyState
           icon={ShoppingBag}
-          title="No hay pedidos separados"
-          description="No se encontraron pedidos separados con los filtros seleccionados"
+          title="No hay pedidos"
+          description="No se encontraron pedidos con los filtros seleccionados"
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

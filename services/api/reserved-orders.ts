@@ -1,7 +1,7 @@
 import { ReservedOrdersResponse, ReservedOrder, CreateReservedOrderPayload, AddItemToReservedOrderPayload, SeparatedOrdersResponse } from '@/types'
 
 /**
- * Obtiene los pedidos separados (reserved, canceled, completed)
+ * Obtiene los pedidos (reserved, canceled, completed)
  * @param status - Filtro opcional por estado: 'reserved', 'canceled', 'completed'
  */
 export async function getSeparatedOrders(status?: 'reserved' | 'canceled' | 'completed'): Promise<ReservedOrder[]> {
@@ -33,7 +33,7 @@ export async function getSeparatedOrders(status?: 'reserved' | 'canceled' | 'com
     if (error instanceof Error) {
       throw error
     }
-    throw new Error('Error desconocido al obtener los pedidos separados')
+    throw new Error('Error desconocido al obtener los pedidos')
   }
 }
 

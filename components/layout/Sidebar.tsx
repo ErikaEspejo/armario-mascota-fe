@@ -6,10 +6,10 @@ import {
   Home,
   Package,
   ShoppingCart,
-  FileText,
   DollarSign,
   BookOpen,
   Boxes,
+  TrendingUp,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -17,10 +17,9 @@ const navItems = [
   { href: '/', label: 'Inicio', icon: Home },
   { href: '/products', label: 'Productos', icon: Boxes },
   { href: '/inventory', label: 'Inventario', icon: Package },
-  { href: '/separate', label: 'Pedidos Separados', icon: ShoppingCart },
-  { href: '/orders', label: 'Pedidos', icon: FileText },
-  { href: '/sell', label: 'Vender', icon: DollarSign },
+  { href: '/separate', label: 'Pedidos', icon: ShoppingCart },
   { href: '/sales', label: 'Ventas', icon: DollarSign },
+  { href: '/finances', label: 'Finanzas', icon: TrendingUp },
   { href: '/catalogs', label: 'Catálogos', icon: BookOpen },
 ]
 

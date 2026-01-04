@@ -125,7 +125,7 @@ export function SeparatedOrderDetailModal({
         <DialogHeader>
           <DialogTitle className="text-base sm:text-lg">Detalle del Pedido #{order.id}</DialogTitle>
           <DialogDescription className="text-xs sm:text-sm">
-            Información completa del pedido separado
+            Información completa del pedido
           </DialogDescription>
         </DialogHeader>
 

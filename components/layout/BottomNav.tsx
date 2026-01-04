@@ -6,15 +6,13 @@ import {
   Home,
   Package,
   ShoppingCart,
-  FileText,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navItems = [
   { href: '/', label: 'Inicio', icon: Home },
   { href: '/inventory', label: 'Inventario', icon: Package },
-  { href: '/separate', label: 'Pedidos Separados', icon: ShoppingCart },
-  { href: '/orders', label: 'Pedidos', icon: FileText },
+  { href: '/separate', label: 'Pedidos', icon: ShoppingCart },
 ]
 
 export function BottomNav() {
@@ -22,7 +20,7 @@ export function BottomNav() {
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-card border-t z-50">
-      <div className="grid grid-cols-4 h-16">
+      <div className="grid grid-cols-3 h-16">
         {navItems.map((item) => {
           const Icon = item.icon
           const isActive = pathname === item.href || 
