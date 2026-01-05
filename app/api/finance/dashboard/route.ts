@@ -1,25 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 const ADMIN_API_BASE_URL = 'http://localhost:8080'
-const FILTER_ITEMS_ENDPOINT = '/admin/items/filter'
+const DASHBOARD_ENDPOINT = '/admin/finance/dashboard'
 
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
+    const period = searchParams.get('period')
+    const from = searchParams.get('from')
+    const to = searchParams.get('to')
+    const compareWith = searchParams.get('compareWith')
     
-    // Construir query params para el backend
+    // Construir URL del backend con parámetros opcionales
     const backendParams = new URLSearchParams()
-    if (searchParams.get('size')) backendParams.append('size', searchParams.get('size')!)
-    if (searchParams.get('primaryColor')) backendParams.append('primaryColor', searchParams.get('primaryColor')!)
-    if (searchParams.get('secondaryColor')) backendParams.append('secondaryColor', searchParams.get('secondaryColor')!)
-    if (searchParams.get('hoodieType')) backendParams.append('hoodieType', searchParams.get('hoodieType')!)
+    if (period) backendParams.append('period', period)
+    if (from) backendParams.append('from', from)
+    if (to) backendParams.append('to', to)
+    if (compareWith) backendParams.append('compareWith', compareWith)
     
     const queryString = backendParams.toString()
     const backendUrl = queryString 
-      ? `${ADMIN_API_BASE_URL}${FILTER_ITEMS_ENDPOINT}?${queryString}`
-      : `${ADMIN_API_BASE_URL}${FILTER_ITEMS_ENDPOINT}`
+      ? `${ADMIN_API_BASE_URL}${DASHBOARD_ENDPOINT}?${queryString}`
+      : `${ADMIN_API_BASE_URL}${DASHBOARD_ENDPOINT}`
     
-    console.log('🔵 [API Route] Proxying filter items request to:', backendUrl)
+    console.log('🔵 [API Route] Proxying GET finance dashboard request to:', backendUrl)
     
     const response = await fetch(backendUrl, {
       method: 'GET',
@@ -34,13 +38,13 @@ export async function GET(request: NextRequest) {
       const errorText = await response.text()
       console.error('🔴 [API Route] Error response:', errorText)
       return NextResponse.json(
-        { error: `Error filtering items: ${response.statusText}`, details: errorText },
+        { error: `Error fetching finance dashboard: ${response.statusText}`, details: errorText },
         { status: response.status }
       )
     }
 
     const data = await response.json()
-    console.log('✅ [API Route] Successfully filtered items')
+    console.log('✅ [API Route] Successfully fetched finance dashboard')
     
     return NextResponse.json(data, {
       status: 200,
@@ -53,7 +57,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('🔴 [API Route] Error:', error)
     return NextResponse.json(
-      { error: 'Error filtering items', details: error instanceof Error ? error.message : 'Unknown error' },
+      { error: 'Error fetching finance dashboard', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )
   }
@@ -69,5 +73,4 @@ export async function OPTIONS() {
     },
   })
 }
-
 

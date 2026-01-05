@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { EmptyState } from '@/components/common/EmptyState'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
-import { formatCurrency, formatDate } from '@/lib/utils'
+import { formatCurrency } from '@/lib/utils'
 import { SaleItem, ReservedOrder, ReservedOrderItem } from '@/types'
 import { getSales } from '@/services/api/sales'
 import { getReservedOrderById } from '@/services/api/reserved-orders'
@@ -196,4 +196,6 @@ export default function SalesPage() {
     </div>
   )
 }
+
+
 

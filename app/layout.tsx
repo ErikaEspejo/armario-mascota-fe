@@ -1,11 +1,8 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
 import './globals.css'
 import { AppProvider } from '@/context/AppContext'
 import { CartProvider } from '@/context/CartContext'
 import { Toaster } from 'sonner'
-
-const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'El Armario de mi Mascota',
@@ -43,7 +40,7 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
       </head>
-      <body className={inter.className}>
+      <body className="font-sans">
         <AppProvider>
           <CartProvider>
             {children}
