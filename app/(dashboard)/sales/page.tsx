@@ -1,8 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { useApp } from '@/context/AppContext'
 import { Header } from '@/components/layout/Header'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -11,52 +9,76 @@ import { Label } from '@/components/ui/label'
 import { EmptyState } from '@/components/common/EmptyState'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { formatCurrency, formatDate } from '@/lib/utils'
-import { Sale } from '@/types'
-import * as saleService from '@/services/mock/sales'
-import { DollarSign, FileText, Eye } from 'lucide-react'
+import { SaleItem, ReservedOrder, ReservedOrderItem } from '@/types'
+import { getSales } from '@/services/api/sales'
+import { getReservedOrderById } from '@/services/api/reserved-orders'
+import { SalesDetailModal } from '@/components/orders/SalesDetailModal'
+import { BusosBySizeModal } from '@/components/orders/BusosBySizeModal'
+import { DollarSign, Eye } from 'lucide-react'
+import { toast } from 'sonner'
 
 export default function SalesPage() {
-  const router = useRouter()
-  const { sales, loading } = useApp()
-  const [filteredSales, setFilteredSales] = useState<Sale[]>([])
+  const [sales, setSales] = useState<SaleItem[]>([])
+  const [loading, setLoading] = useState(true)
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
-  const [customerName, setCustomerName] = useState('')
+  const [selectedOrder, setSelectedOrder] = useState<ReservedOrder | null>(null)
+  const [selectedItem, setSelectedItem] = useState<ReservedOrderItem | null>(null)
+  const [detailModalOpen, setDetailModalOpen] = useState(false)
+  const [busosModalOpen, setBusosModalOpen] = useState(false)
+  const [loadingOrder, setLoadingOrder] = useState(false)
 
   useEffect(() => {
-    filterSales()
-  }, [sales, dateFrom, dateTo, customerName])
+    loadSales()
+  }, [dateFrom, dateTo])
 
-  const filterSales = async () => {
+  const loadSales = async () => {
+    setLoading(true)
     try {
-      const filters: { dateFrom?: string; dateTo?: string; customerName?: string } = {}
-      if (dateFrom) filters.dateFrom = dateFrom
-      if (dateTo) filters.dateTo = dateTo
-      if (customerName) filters.customerName = customerName
-
-      const result = await saleService.filterSales(filters)
-      setFilteredSales(result)
+      const salesData = await getSales(dateFrom || undefined, dateTo || undefined)
+      setSales(salesData)
     } catch (error) {
-      console.error('Error filtering sales:', error)
+      console.error('Error loading sales:', error)
+      toast.error(error instanceof Error ? error.message : 'Error al cargar las ventas')
+    } finally {
+      setLoading(false)
     }
   }
 
-  const paymentMethodLabels = {
+  const handleViewDetail = async (sale: SaleItem) => {
+    setLoadingOrder(true)
+    setDetailModalOpen(true)
+    try {
+      const order = await getReservedOrderById(sale.reservedOrderId)
+      setSelectedOrder(order)
+    } catch (error) {
+      console.error('Error loading order details:', error)
+      toast.error(error instanceof Error ? error.message : 'Error al cargar los detalles del pedido')
+      setDetailModalOpen(false)
+    } finally {
+      setLoadingOrder(false)
+    }
+  }
+
+  const handleViewBusos = (item: ReservedOrderItem) => {
+    setSelectedItem(item)
+    setBusosModalOpen(true)
+  }
+
+  const paymentMethodLabels: Record<string, string> = {
     cash: 'Efectivo',
     card: 'Tarjeta',
     transfer: 'Transferencia',
     other: 'Otro',
   }
 
-  if (loading) {
-    return (
-      <div>
-        <Header title="Ventas" />
-        <div className="flex justify-center items-center min-h-[400px]">
-          <LoadingSpinner size="lg" />
-        </div>
-      </div>
-    )
+  const formatSaleDate = (dateString: string): string => {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('es-AR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    })
   }
 
   return (
@@ -75,7 +97,7 @@ export default function SalesPage() {
             <CardTitle>Filtros</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="dateFrom">Desde</Label>
                 <Input
@@ -94,86 +116,83 @@ export default function SalesPage() {
                   onChange={(e) => setDateTo(e.target.value)}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="customerName">Cliente</Label>
-                <Input
-                  id="customerName"
-                  type="text"
-                  placeholder="Nombre del cliente"
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                />
-              </div>
             </div>
           </CardContent>
         </Card>
 
-        {filteredSales.length === 0 ? (
+        {loading ? (
+          <div className="flex justify-center items-center min-h-[400px]">
+            <LoadingSpinner size="lg" />
+          </div>
+        ) : sales.length === 0 ? (
           <EmptyState
             icon={DollarSign}
             title="No hay ventas"
             description="Aún no se han registrado ventas"
           />
         ) : (
-          <div className="space-y-4">
-            {filteredSales.map((sale) => (
-              <Card key={sale.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle className="text-lg">Venta #{sale.id}</CardTitle>
-                      <p className="text-sm text-muted-foreground">
-                        {formatDate(sale.createdAt)}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-2xl font-bold text-primary">
-                        {formatCurrency(sale.totals.total)}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {paymentMethodLabels[sale.paymentMethod]}
-                      </p>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2 mb-4">
-                    <p className="text-sm text-muted-foreground">
-                      Items: {sale.items.length}
-                    </p>
-                    {sale.orderId && (
-                      <p className="text-sm text-muted-foreground">
-                        Pedido: {sale.orderId}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => router.push(`/sales/${sale.id}`)}
-                    >
-                      <Eye className="h-4 w-4 mr-2" />
-                      Ver Detalle
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        // Mock: Open receipt
-                        window.open(`/api/receipts/${sale.id}`, '_blank')
-                      }}
-                    >
-                      <FileText className="h-4 w-4 mr-2" />
-                      Comprobante
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          <Card>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-muted">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-sm font-semibold">Fecha</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold">Cliente</th>
+                      <th className="px-4 py-3 text-right text-sm font-semibold">Valor Pagado</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold">Destino</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold">Método de Pago</th>
+                      <th className="px-4 py-3 text-center text-sm font-semibold">Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sales.map((sale, index) => (
+                      <tr
+                        key={sale.id}
+                        className={index % 2 === 0 ? 'bg-white' : 'bg-muted/50'}
+                      >
+                        <td className="px-4 py-3 text-sm">{formatSaleDate(sale.soldAt)}</td>
+                        <td className="px-4 py-3 text-sm font-medium">{sale.customerName}</td>
+                        <td className="px-4 py-3 text-sm text-right font-semibold">
+                          {formatCurrency(sale.amountPaid)}
+                        </td>
+                        <td className="px-4 py-3 text-sm">{sale.paymentDestination}</td>
+                        <td className="px-4 py-3 text-sm">
+                          {paymentMethodLabels[sale.paymentMethod] || sale.paymentMethod}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleViewDetail(sale)}
+                            disabled={loadingOrder}
+                          >
+                            <Eye className="h-4 w-4 mr-2" />
+                            Ver detalle
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
         )}
       </div>
+
+      <SalesDetailModal
+        open={detailModalOpen}
+        onOpenChange={setDetailModalOpen}
+        order={selectedOrder}
+        onViewBusos={handleViewBusos}
+      />
+
+      <BusosBySizeModal
+        open={busosModalOpen}
+        onOpenChange={setBusosModalOpen}
+        item={selectedItem}
+      />
     </div>
   )
 }

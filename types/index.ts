@@ -162,6 +162,20 @@ export interface SeparatedOrdersResponse {
   carts: ReservedOrder[]
 }
 
+export interface SaleItem {
+  id: number
+  soldAt: string
+  reservedOrderId: number
+  customerName: string
+  amountPaid: number
+  paymentDestination: string
+  paymentMethod: string
+}
+
+export interface SalesResponse {
+  sales: SaleItem[]
+}
+
 export type OrderStatus = Order['status']
 export type PaymentMethod = Sale['paymentMethod']
 export type TemplateVersion = CatalogExport['templateVersion']

@@ -218,6 +218,36 @@ export async function cancelReservedOrder(orderId: number): Promise<void> {
 }
 
 /**
+ * Obtiene un pedido reservado por ID
+ */
+export async function getReservedOrderById(orderId: number): Promise<ReservedOrder> {
+  const url = `/api/reserved-orders/${orderId}`
+  
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+      throw new Error(errorData.error || `Error fetching reserved order: ${response.status} ${response.statusText}`)
+    }
+
+    const data: ReservedOrder = await response.json()
+    return data
+  } catch (error) {
+    console.error('Error fetching reserved order:', error)
+    if (error instanceof Error) {
+      throw error
+    }
+    throw new Error('Error desconocido al obtener el pedido reservado')
+  }
+}
+
+/**
  * Vende un pedido reservado
  */
 export interface SellReservedOrderPayload {
