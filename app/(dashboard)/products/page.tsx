@@ -28,11 +28,14 @@ import {
   BUSO_TYPES, 
   IMAGE_TYPES, 
   DECO_BASE_OPTIONS,
+  AVAILABLE_SIZES,
   getAvailableSizes,
   mapColorFromAPI,
   mapHoodieTypeFromAPI,
   mapImageTypeFromAPI,
-  mapDecoBaseFromAPI
+  mapDecoBaseFromAPI,
+  parseImageTypeToSizes,
+  sizesToImageTypeString
 } from '@/lib/decoration-constants'
 import { Upload, Image as ImageIcon, Settings, Save, CheckCircle2, Pencil } from 'lucide-react'
 import { toast } from 'sonner'
@@ -55,6 +58,11 @@ export default function ProductsPage() {
   
   // Asignaciones por card
   const [assignments, setAssignments] = useState<Record<string, { size: string; quantity: number }>>({})
+  
+  // Tallas seleccionadas para el modal de edición
+  const [selectedSizes, setSelectedSizes] = useState<string[]>([])
+  // Tallas seleccionadas por asset en la vista de pendientes
+  const [selectedSizesByAsset, setSelectedSizesByAsset] = useState<Record<string, string[]>>({})
 
   const handleLoadImages = async () => {
     setLoadingImages(true)
@@ -147,11 +155,19 @@ export default function ProductsPage() {
           colorPrimary: mappedColorPrimary,
           colorSecondary: mappedColorSecondary,
           hoodieType: mapHoodieTypeFromAPI(asset.hoodieType || ''),
-          imageType: mapImageTypeFromAPI(asset.imageType || ''),
+          imageType: asset.imageType || '', // Mantener el formato del backend (concatenado por comas)
           decoBase: mapDecoBaseFromAPI(asset.decoBase || ''),
         }
       })
       setAllPendingAssets(assetsWithDefaults)
+      // Inicializar las tallas seleccionadas para cada asset
+      const initialSizes: Record<string, string[]> = {}
+      assetsWithDefaults.forEach(asset => {
+        if (asset.id) {
+          initialSizes[asset.id] = parseImageTypeToSizes(asset.imageType || '')
+        }
+      })
+      setSelectedSizesByAsset(initialSizes)
       setShowAllPending(true)
     } catch (error) {
       console.error('🔴 Error cargando design assets pendientes:', error)
@@ -184,12 +200,14 @@ export default function ProductsPage() {
         colorPrimary: mappedColorPrimary,
         colorSecondary: mappedColorSecondary,
         hoodieType: mapHoodieTypeFromAPI(localAsset.hoodieType || ''),
-        imageType: mapImageTypeFromAPI(localAsset.imageType || ''),
+        imageType: localAsset.imageType || '', // Mantener el formato del backend
         decoBase: mapDecoBaseFromAPI(localAsset.decoBase || ''),
         hasHighlights: localAsset.hasHighlights ?? false,
         imageUrl: localAsset.imageUrl || '',
       }
       setEditingAsset(assetWithDefaults)
+      // Parsear imageType a array de tallas para los checkboxes
+      setSelectedSizes(parseImageTypeToSizes(localAsset.imageType || ''))
       setEditDecorationsOpen(true)
       return
     }
@@ -209,12 +227,14 @@ export default function ProductsPage() {
           colorPrimary: mappedColorPrimary,
           colorSecondary: mappedColorSecondary,
           hoodieType: mapHoodieTypeFromAPI(asset.hoodieType || ''),
-          imageType: mapImageTypeFromAPI(asset.imageType || ''),
+          imageType: asset.imageType || '', // Mantener el formato del backend
           decoBase: mapDecoBaseFromAPI(asset.decoBase || ''),
           hasHighlights: asset.hasHighlights ?? false,
           imageUrl: asset.imageUrl || '',
         }
         setEditingAsset(assetWithDefaults)
+        // Parsear imageType a array de tallas para los checkboxes
+        setSelectedSizes(parseImageTypeToSizes(asset.imageType || ''))
         setEditDecorationsOpen(true)
       } else {
         toast.error('No se encontró el diseño')
@@ -251,19 +271,35 @@ export default function ProductsPage() {
         return
       }
       
-      if (!asset.imageType || !asset.imageType.trim()) {
-        toast.error('El tipo de imagen es requerido')
-        return
-      }
-      
       if (!asset.decoBase || !asset.decoBase.trim()) {
         toast.error('La base de decoración es requerida')
         return
       }
       
+      // Validar que al menos una talla esté seleccionada
+      // Si viene del modal principal, usar selectedSizes; si viene de la vista de pendientes, parsear del asset
+      let imageTypeString: string
+      if (showAllPending && asset.id) {
+        // Vista de pendientes: usar las tallas del estado o parsear del asset
+        const sizes = selectedSizesByAsset[asset.id] || parseImageTypeToSizes(asset.imageType || '')
+        if (sizes.length === 0) {
+          toast.error('Debe seleccionar al menos una talla')
+          return
+        }
+        imageTypeString = sizesToImageTypeString(sizes)
+      } else {
+        // Modal principal: usar selectedSizes
+        if (!selectedSizes || selectedSizes.length === 0) {
+          toast.error('Debe seleccionar al menos una talla')
+          return
+        }
+        imageTypeString = sizesToImageTypeString(selectedSizes)
+      }
+      
       // Si colorSecondary está vacío, asignar el mismo que colorPrimary
       const assetToSave = {
         ...asset,
+        imageType: imageTypeString,
         colorSecondary: asset.colorSecondary && asset.colorSecondary.trim() 
           ? asset.colorSecondary 
           : asset.colorPrimary,
@@ -287,7 +323,16 @@ export default function ProductsPage() {
         prev.map(a => a.id === assetToSave.id ? assetToSave : a)
       )
       
+      // Actualizar las tallas seleccionadas si estamos en la vista de pendientes
+      if (showAllPending && assetToSave.id) {
+        setSelectedSizesByAsset(prev => ({
+          ...prev,
+          [assetToSave.id!]: parseImageTypeToSizes(imageTypeString)
+        }))
+      }
+      
       setEditingAsset(null)
+      setSelectedSizes([])
       if (!showAllPending) {
         setEditDecorationsOpen(false)
       }
@@ -673,6 +718,8 @@ export default function ProductsPage() {
         setEditDecorationsOpen(open)
         if (!open) {
           setEditingAsset(null)
+          setSelectedSizes([])
+          setSelectedSizesByAsset({})
           setShowAllPending(false)
           setAllPendingAssets([])
         }
@@ -832,17 +879,38 @@ export default function ProductsPage() {
                                 </div>
 
                                 <div className="space-y-2">
-                                  <Label htmlFor={`imageType-${index}`}>Tipo de Imagen <span className="text-red-500">*</span></Label>
-                                  <Combobox
-                                    value={assetToEdit.imageType}
-                                    onValueChange={(value) => {
-                                      if (!value) return // No permitir limpiar campos requeridos
-                                      setEditingAsset({ ...assetToEdit, imageType: value })
-                                    }}
-                                    options={IMAGE_TYPES}
-                                    placeholder="Seleccione un tipo"
-                                    searchPlaceholder="Buscar tipo..."
-                                  />
+                                  <Label>Imagen válida para: <span className="text-red-500">*</span></Label>
+                                  <div className="grid grid-cols-2 gap-3 mt-2">
+                                    {AVAILABLE_SIZES.map((size) => {
+                                      const assetId = asset.id || `temp-${index}`
+                                      const currentSizes = selectedSizesByAsset[assetId] || parseImageTypeToSizes(assetToEdit.imageType || '')
+                                      return (
+                                        <div key={size} className="flex items-center space-x-2">
+                                          <Checkbox
+                                            id={`size-${assetId}-${size}`}
+                                            checked={currentSizes.includes(size)}
+                                            onCheckedChange={(checked) => {
+                                              const assetId = asset.id || `temp-${index}`
+                                              const currentSizes = selectedSizesByAsset[assetId] || parseImageTypeToSizes(assetToEdit.imageType || '')
+                                              let newSizes: string[]
+                                              if (checked) {
+                                                newSizes = [...currentSizes, size]
+                                              } else {
+                                                newSizes = currentSizes.filter(s => s !== size)
+                                              }
+                                              setSelectedSizesByAsset({ ...selectedSizesByAsset, [assetId]: newSizes })
+                                              // Actualizar también el imageType en editingAsset
+                                              const imageTypeString = sizesToImageTypeString(newSizes)
+                                              setEditingAsset({ ...assetToEdit, imageType: imageTypeString })
+                                            }}
+                                          />
+                                          <Label htmlFor={`size-${assetId}-${size}`} className="cursor-pointer text-sm font-normal">
+                                            {size}
+                                          </Label>
+                                        </div>
+                                      )
+                                    })}
+                                  </div>
                                 </div>
                               </div>
 
@@ -989,17 +1057,27 @@ export default function ProductsPage() {
                           </div>
 
                           <div className="space-y-2">
-                            <Label htmlFor="imageType">Tipo de Imagen <span className="text-red-500">*</span></Label>
-                            <Combobox
-                              value={editingAsset.imageType}
-                              onValueChange={(value) => {
-                                if (!value) return // No permitir limpiar campos requeridos
-                                setEditingAsset({ ...editingAsset, imageType: value })
-                              }}
-                              options={IMAGE_TYPES}
-                              placeholder="Seleccione un tipo"
-                              searchPlaceholder="Buscar tipo..."
-                            />
+                            <Label>Imagen válida para: <span className="text-red-500">*</span></Label>
+                            <div className="grid grid-cols-2 gap-3 mt-2">
+                              {AVAILABLE_SIZES.map((size) => (
+                                <div key={size} className="flex items-center space-x-2">
+                                  <Checkbox
+                                    id={`size-${size}`}
+                                    checked={selectedSizes.includes(size)}
+                                    onCheckedChange={(checked) => {
+                                      if (checked) {
+                                        setSelectedSizes([...selectedSizes, size])
+                                      } else {
+                                        setSelectedSizes(selectedSizes.filter(s => s !== size))
+                                      }
+                                    }}
+                                  />
+                                  <Label htmlFor={`size-${size}`} className="cursor-pointer text-sm font-normal">
+                                    {size}
+                                  </Label>
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         </div>
 

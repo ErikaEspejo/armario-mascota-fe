@@ -51,6 +51,8 @@ export const DECO_BASE_OPTIONS = [
   'N/A',
 ] as const
 
+export const AVAILABLE_SIZES = ['Mini', 'Intermedio', 'XS', 'S', 'M', 'L', 'XL'] as const
+
 /**
  * Mapea los tipos de imagen completos a códigos cortos
  */
@@ -156,5 +158,38 @@ export function mapDecoBaseFromAPI(decoBase: string): string {
   if (!decoBase || !decoBase.trim()) return 'N/A'
   const matched = findMatchingOption(decoBase, DECO_BASE_OPTIONS)
   return matched || decoBase
+}
+
+/**
+ * Parsea el imageType del backend (formato "Mini,XS,S") a un array de tallas
+ */
+export function parseImageTypeToSizes(imageType: string): string[] {
+  if (!imageType || !imageType.trim()) return []
+  
+  // Dividir por comas y limpiar espacios
+  const sizes = imageType.split(',').map(s => s.trim()).filter(s => s.length > 0)
+  
+  // Filtrar solo las tallas válidas
+  return sizes.filter(size => AVAILABLE_SIZES.includes(size as typeof AVAILABLE_SIZES[number]))
+}
+
+/**
+ * Convierte un array de tallas a string concatenado por comas
+ * Las tallas se ordenan según el orden: Mini > Intermedio > XS > S > M > L > XL
+ */
+export function sizesToImageTypeString(sizes: string[]): string {
+  if (!sizes || sizes.length === 0) return ''
+  
+  // Filtrar solo las tallas válidas
+  const validSizes = sizes.filter(size => AVAILABLE_SIZES.includes(size as typeof AVAILABLE_SIZES[number]))
+  
+  // Ordenar según el orden definido en AVAILABLE_SIZES
+  const sortedSizes = validSizes.sort((a, b) => {
+    const indexA = AVAILABLE_SIZES.indexOf(a as typeof AVAILABLE_SIZES[number])
+    const indexB = AVAILABLE_SIZES.indexOf(b as typeof AVAILABLE_SIZES[number])
+    return indexA - indexB
+  })
+  
+  return sortedSizes.join(',')
 }
 
