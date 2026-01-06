@@ -15,8 +15,11 @@ export const metadata: Metadata = {
     title: 'Armario Mascota',
   },
   icons: {
-    icon: '/icons/icon-192x192.png',
-    apple: '/icons/icon-192x192.png',
+    icon: [
+      { url: '/favicon.ico', type: 'image/x-icon' },
+      { url: '/assets/logo.png', type: 'image/png' },
+    ],
+    apple: '/assets/logo.png',
   },
   viewport: {
     width: 'device-width',
@@ -38,7 +41,10 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="format-detection" content="telephone=no" />
         <meta name="mobile-web-app-capable" content="yes" />
-        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+        <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" href="/assets/logo.png" />
+        <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="apple-touch-icon" href="/assets/logo.png" />
       </head>
       <body className="font-sans">
         <AppProvider>

@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import {
   Home,
@@ -30,7 +31,15 @@ export function Sidebar() {
     <aside className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 md:left-0 bg-card border-r">
       <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
         <div className="flex items-center flex-shrink-0 px-4 mb-8">
-          <h1 className="text-xl font-bold text-primary">Armario Mascota</h1>
+          <Image
+            src="/assets/logo.png"
+            alt="Armario Mascota"
+            width={200}
+            height={60}
+            className="max-w-full h-auto object-contain"
+            priority
+            unoptimized={process.env.NODE_ENV === 'development'}
+          />
         </div>
         <nav className="mt-5 flex-1 px-2 space-y-1">
           {navItems.map((item) => {
