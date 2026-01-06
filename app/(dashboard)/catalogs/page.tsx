@@ -1,119 +1,170 @@
 'use client'
 
-import { useApp } from '@/context/AppContext'
+import { useState } from 'react'
 import { Header } from '@/components/layout/Header'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { EmptyState } from '@/components/common/EmptyState'
-import { LoadingSpinner } from '@/components/common/LoadingSpinner'
-import { formatDate } from '@/lib/utils'
-import { BookOpen, Download, FileDown } from 'lucide-react'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Download } from 'lucide-react'
 import { toast } from 'sonner'
 
+const SIZES = ['Mini', 'Intermedio', 'XS', 'S', 'M', 'L', 'XL'] as const
+const FORMATS = ['PNG', 'PDF'] as const
+
+type Size = typeof SIZES[number]
+type Format = typeof FORMATS[number]
+
+/**
+ * Mapea el nombre de talla al código usado por la API
+ */
+function getSizeCode(sizeName: Size): string {
+  const sizeMap: Record<string, string> = {
+    'Mini': 'MN',
+    'Intermedio': 'IT',
+  }
+  return sizeMap[sizeName] || sizeName
+}
+
 export default function CatalogsPage() {
-  const { catalogs, sales, loading } = useApp()
+  const [selectedSize, setSelectedSize] = useState<Size | ''>('')
+  const [selectedFormat, setSelectedFormat] = useState<Format | ''>('')
+  const [isDownloading, setIsDownloading] = useState(false)
 
-  const handleDownloadPDF = (_catalogId: string, pdfUrl: string) => {
-    // Mock download - pdfUrl will be used when implementing real download
-    toast.success('Descargando PDF...')
-    // In real implementation: window.open(pdfUrl, '_blank')
-    if (pdfUrl) {
-      console.log('PDF URL:', pdfUrl)
+  const handleDownload = async () => {
+    if (!selectedSize || !selectedFormat) {
+      toast.error('Por favor selecciona una talla y un formato')
+      return
     }
-  }
 
-  const handleDownloadPNGs = (catalogId: string, pngUrls: string[]) => {
-    // Mock download
-    toast.success(`Descargando ${pngUrls.length} imágenes...`)
-    // In real implementation: download all PNGs
-  }
+    setIsDownloading(true)
+    const sizeCode = getSizeCode(selectedSize as Size)
+    const format = selectedFormat.toLowerCase()
+    
+    try {
+      // Usar la API route de Next.js como proxy para evitar problemas de CORS
+      const url = `/api/catalog?size=${sizeCode}&format=${format}`
+      
+      console.log('🔵 [Client] Calling API route:', url)
+      
+      const response = await fetch(url, {
+        method: 'GET',
+      })
+      
+      console.log('🔵 [Client] Response status:', response.status)
 
-  if (loading) {
-    return (
-      <div>
-        <Header title="Catálogos" />
-        <div className="flex justify-center items-center min-h-[400px]">
-          <LoadingSpinner size="lg" />
-        </div>
-      </div>
-    )
+      if (response.status === 404) {
+        const errorData = await response.json().catch(() => ({}))
+        toast.error(errorData.error || 'No hay productos en dicha talla')
+        setIsDownloading(false)
+        return
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `Error al descargar el catálogo: ${response.status} ${response.statusText}`)
+      }
+
+      // Obtener el blob de la respuesta
+      const blob = await response.blob()
+      
+      // Determinar la extensión según el formato
+      const extension = format === 'png' ? 'png' : 'pdf'
+      
+      // Crear URL temporal para el blob
+      const blobUrl = URL.createObjectURL(blob)
+      
+      // Crear un elemento <a> temporal para descargar
+      const link = document.createElement('a')
+      link.href = blobUrl
+      link.download = `catalogo-${selectedSize}-${Date.now()}.${extension}`
+      document.body.appendChild(link)
+      link.click()
+      
+      // Limpiar
+      document.body.removeChild(link)
+      URL.revokeObjectURL(blobUrl)
+      
+      toast.success(`Catálogo descargado exitosamente`)
+    } catch (error) {
+      console.error('Error al descargar catálogo:', error)
+      toast.error(error instanceof Error ? error.message : 'Error al descargar el catálogo')
+    } finally {
+      setIsDownloading(false)
+    }
   }
 
   return (
     <div>
-      <Header title="Catálogos" />
+      <Header title="Crear catalogo" />
       <div className="space-y-6">
         <div className="hidden md:block">
-          <h1 className="text-3xl font-bold mb-2">Catálogos Generados</h1>
+          <h1 className="text-3xl font-bold mb-2">Crear catalogo</h1>
           <p className="text-muted-foreground mb-6">
-            Gestiona los catálogos generados por venta
+            Selecciona la talla y el formato para generar y descargar el catálogo
           </p>
         </div>
 
-        {catalogs.length === 0 ? (
-          <EmptyState
-            icon={BookOpen}
-            title="No hay catálogos"
-            description="Los catálogos se generan automáticamente al confirmar una venta"
-          />
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {catalogs.map((catalog) => {
-              const sale = sales.find(s => s.id === catalog.saleId)
-              return (
-                <Card key={catalog.id} className="hover:shadow-lg transition-shadow">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <CardTitle className="text-lg">Catálogo #{catalog.id}</CardTitle>
-                        <p className="text-sm text-muted-foreground">
-                          {formatDate(catalog.createdAt)}
-                        </p>
-                      </div>
-                      <Badge variant="outline">
-                        {catalog.templateVersion === 'v1' ? '3x3' : '2x2'}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {sale && (
-                      <div>
-                        <p className="text-sm text-muted-foreground">Venta:</p>
-                        <p className="font-semibold">#{sale.id}</p>
-                      </div>
-                    )}
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-2">
-                        Páginas: {catalog.pngUrls.length}
-                      </p>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDownloadPDF(catalog.id, catalog.pdfUrl)}
-                        className="w-full"
-                      >
-                        <FileDown className="h-4 w-4 mr-2" />
-                        Descargar PDF
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDownloadPNGs(catalog.id, catalog.pngUrls)}
-                        className="w-full"
-                      >
-                        <Download className="h-4 w-4 mr-2" />
-                        Descargar PNGs ({catalog.pngUrls.length})
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              )
-            })}
-          </div>
-        )}
+        <Card className="max-w-2xl">
+          <CardHeader>
+            <CardTitle>Configuración del catálogo</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="size-select">Talla</Label>
+              <Select
+                value={selectedSize}
+                onValueChange={(value) => setSelectedSize(value as Size)}
+              >
+                <SelectTrigger id="size-select">
+                  <SelectValue placeholder="Seleccionar talla" />
+                </SelectTrigger>
+                <SelectContent>
+                  {SIZES.map((size) => (
+                    <SelectItem key={size} value={size}>
+                      {size}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="format-select">Formato de salida</Label>
+              <Select
+                value={selectedFormat}
+                onValueChange={(value) => setSelectedFormat(value as Format)}
+              >
+                <SelectTrigger id="format-select">
+                  <SelectValue placeholder="Seleccionar formato" />
+                </SelectTrigger>
+                <SelectContent>
+                  {FORMATS.map((format) => (
+                    <SelectItem key={format} value={format}>
+                      {format}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Button
+              onClick={handleDownload}
+              disabled={!selectedSize || !selectedFormat || isDownloading}
+              className="w-full"
+              size="lg"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              {isDownloading ? 'Descargando...' : 'Descargar'}
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )
