@@ -39,12 +39,11 @@ export function SelectCartModal({ open, onOpenChange, onSelectCart }: SelectCart
   const [creating, setCreating] = useState(false)
   
   // Form state
-  const [formData, setFormData] = useState<CreateReservedOrderPayload>({
+  const [formData, setFormData] = useState<Omit<CreateReservedOrderPayload, 'orderType'>>({
     assignedTo: 'Erika',
     customerName: '',
     customerPhone: '',
     notes: '',
-    orderType: 'Detal',
   })
 
   // Load orders when modal opens
@@ -100,7 +99,7 @@ export function SelectCartModal({ open, onOpenChange, onSelectCart }: SelectCart
     try {
       const payload: CreateReservedOrderPayload = {
         assignedTo: formData.assignedTo.trim(),
-        orderType: formData.orderType || 'Detal', // Ensure it always has a value
+        orderType: 'Detal', // El backend lo maneja automáticamente, pero se requiere en el tipo
         ...(formData.customerName?.trim() && { customerName: formData.customerName.trim() }),
         ...(formData.customerPhone?.trim() && { customerPhone: formData.customerPhone.trim() }),
         ...(formData.notes?.trim() && { notes: formData.notes.trim() }),
@@ -120,7 +119,6 @@ export function SelectCartModal({ open, onOpenChange, onSelectCart }: SelectCart
         customerName: '',
         customerPhone: '',
         notes: '',
-        orderType: 'Detal',
       })
       setShowCreateForm(false)
     } catch (error) {
@@ -232,24 +230,6 @@ export function SelectCartModal({ open, onOpenChange, onSelectCart }: SelectCart
                 onChange={(e) => setFormData({ ...formData, assignedTo: e.target.value })}
                 placeholder="Erika"
               />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="orderType">Tipo de orden *</Label>
-              <Select
-                value={formData.orderType}
-                onValueChange={(value: 'Detal' | 'Mayorista') => 
-                  setFormData({ ...formData, orderType: value })
-                }
-              >
-                <SelectTrigger id="orderType">
-                  <SelectValue placeholder="Selecciona tipo de orden" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Detal">Detal</SelectItem>
-                  <SelectItem value="Mayorista">Mayorista</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
 
             <div className="space-y-2">

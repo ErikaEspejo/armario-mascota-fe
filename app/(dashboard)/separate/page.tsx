@@ -84,8 +84,9 @@ export default function SeparateOrderPage() {
           return false
         }
         
-        // Comparación exacta
-        return orderType === orderTypeFilter
+        // Comparación case-insensitive: el backend devuelve "mayorista" en minúsculas,
+        // pero el filtro usa "Mayorista" con mayúscula inicial
+        return orderType.toLowerCase() === orderTypeFilter.toLowerCase()
       })
     }
     
