@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
-
-const ADMIN_API_BASE_URL = 'http://localhost:8080'
+import { ADMIN_API_BASE_URL } from '@/lib/constants'
 const STOCK_ENDPOINT = '/admin/items/stock'
 
 export async function POST(request: Request) {

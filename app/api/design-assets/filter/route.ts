@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-const ADMIN_API_BASE_URL = 'http://localhost:8080'
+import { ADMIN_API_BASE_URL } from '@/lib/constants'
 // TODO: Replace with actual endpoint when provided
 const FILTER_DESIGN_ASSETS_ENDPOINT = '/admin/design-assets/filter'
 

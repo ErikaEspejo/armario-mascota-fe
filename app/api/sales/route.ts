@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-const ADMIN_API_BASE_URL = 'http://localhost:8080'
+import { ADMIN_API_BASE_URL } from '@/lib/constants'
 const SALES_ENDPOINT = '/admin/sales'
 
 export async function GET(request: NextRequest) {

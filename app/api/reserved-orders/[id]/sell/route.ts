@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-const ADMIN_API_BASE_URL = 'http://localhost:8080'
+import { ADMIN_API_BASE_URL } from '@/lib/constants'
 const RESERVED_ORDERS_ENDPOINT = '/admin/reserved-orders'
 
 export async function POST(

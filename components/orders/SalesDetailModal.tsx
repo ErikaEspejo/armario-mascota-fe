@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { formatCurrency } from '@/lib/utils'
+import { ADMIN_API_BASE_URL } from '@/lib/constants'
 import { Eye } from 'lucide-react'
 import { useMemo } from 'react'
 
@@ -59,7 +60,7 @@ function getImageUrl(imageUrlThumb: string): string {
   // Si ya es una URL completa, retornarla
   if (imageUrlThumb.startsWith('http')) return imageUrlThumb
   // Si es una ruta relativa, construir la URL completa
-  return `http://localhost:8080${imageUrlThumb}`
+  return `${ADMIN_API_BASE_URL}${imageUrlThumb}`
 }
 
 // Función para agrupar líneas por tipo de buso y talla

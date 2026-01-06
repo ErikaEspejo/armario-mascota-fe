@@ -81,31 +81,15 @@ export function mapImageTypeToCode(imageType: string): string {
 export function getAvailableSizes(imageType: string): string[] {
   if (!imageType || !imageType.trim()) return []
   
+  const trimmed = imageType.trim()
+  
   // Si contiene comas, es formato nuevo separado por comas
-  if (imageType.includes(',')) {
-    return parseImageTypeToSizes(imageType)
+  if (trimmed.includes(',')) {
+    return parseImageTypeToSizes(trimmed)
   }
   
-  // Si contiene códigos del nuevo formato (Mn, It, X, S, M, L, H), parsearlo como código compuesto
-  // Case-insensitive para detectar el formato nuevo
-  const upperText = imageType.trim().toUpperCase()
-  if (upperText.includes('MN') || upperText.includes('IT') || upperText.includes('X') || 
-      upperText.includes('S') || upperText.includes('M') || upperText.includes('L') || upperText.includes('H')) {
-    return parseImageTypeToSizes(imageType)
-  }
-  
-  // Compatibilidad con formato antiguo (por si hay datos antiguos)
-  const code = mapImageTypeToCode(imageType)
-  switch (code) {
-    case 'IT':
-      return ['Mini', 'Intermedio']
-    case 'DP':
-      return ['XS', 'S', 'M', 'L']
-    case 'XL':
-      return ['XL']
-    default:
-      return []
-  }
+  // Siempre usar parseImageTypeToSizes para el formato nuevo (código compuesto)
+  return parseImageTypeToSizes(trimmed)
 }
 
 /**
@@ -215,18 +199,26 @@ export function parseImageTypeToSizes(imageType: string): string[] {
   // IMPORTANTE: Si aparece "XS" en el código compuesto, son DOS tallas: X (XS) y S (S)
   const foundSizes: Set<string> = new Set()
   const text = imageType.trim()
+  const upperText = text.toUpperCase()
+  
+  // Debug: solo para ver qué está pasando
+  console.log('🔍 parseImageTypeToSizes - imageType:', imageType, 'upperText:', upperText)
   
   // Buscar códigos de 2 caracteres primero (Mn, It) - case insensitive
-  if (text.match(/Mn/i)) foundSizes.add('Mini')
-  if (text.match(/It/i)) foundSizes.add('Intermedio')
+  if (upperText.includes('MN')) foundSizes.add('Mini')
+  if (upperText.includes('IT')) foundSizes.add('Intermedio')
   
-  // Códigos de 1 carácter - case insensitive
-  if (text.match(/H/i)) foundSizes.add('XL')
-  if (text.match(/L/i)) foundSizes.add('L')
+  // Códigos de 1 carácter - buscar solo si realmente están presentes
+  if (upperText.includes('H')) foundSizes.add('XL')
+  
+  // Para L: buscar solo si está presente y no es parte de otro código
+  if (upperText.includes('L')) {
+    // Verificar que no sea parte de otro código (por ahora L es único)
+    foundSizes.add('L')
+  }
   
   // Para M: buscar todas las M que no sean parte de Mn
   let searchIndex = 0
-  const upperText = text.toUpperCase()
   while (true) {
     const mIndex = upperText.indexOf('M', searchIndex)
     if (mIndex === -1) break

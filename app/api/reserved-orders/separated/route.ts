@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-const ADMIN_API_BASE_URL = 'http://localhost:8080'
+import { ADMIN_API_BASE_URL } from '@/lib/constants'
 const SEPARATED_ORDERS_ENDPOINT = '/admin/reserved-orders/separated'
 
 export async function GET(request: NextRequest) {
