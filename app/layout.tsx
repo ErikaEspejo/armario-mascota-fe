@@ -18,9 +18,9 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       { url: '/favicon.ico', type: 'image/x-icon' },
-      { url: '/assets/logo.png', type: 'image/png' },
+      { url: '/assets/logo.svg', type: 'image/svg+xml' },
     ],
-    apple: '/assets/logo.png',
+    apple: '/assets/logo.svg',
   },
   viewport: {
     width: 'device-width',
@@ -57,9 +57,9 @@ export default function RootLayout({
         <meta name="format-detection" content="telephone=no" />
         <meta name="mobile-web-app-capable" content="yes" />
         <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-        <link rel="icon" type="image/png" href="/assets/logo.png" />
+        <link rel="icon" type="image/svg+xml" href="/assets/logo.svg" />
         <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
-        <link rel="apple-touch-icon" href="/assets/logo.png" />
+        <link rel="apple-touch-icon" href="/assets/logo.svg" />
       </head>
       <body className="font-sans">
         <ThemeProvider>

@@ -32,7 +32,7 @@ export function Sidebar() {
       <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
         <div className="flex items-center flex-shrink-0 px-4 mb-8">
           <Image
-            src="/assets/logo.png"
+            src="/assets/logo.svg"
             alt="Armario Mascota"
             width={200}
             height={60}
