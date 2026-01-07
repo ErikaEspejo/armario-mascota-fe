@@ -1,18 +1,12 @@
 // API Client - Ready for real backend integration
 // Currently returns mock data, replace with actual API calls
 
-const getApiBaseUrl = (): string => {
-  // @ts-ignore - process is available in Node.js environment
-  const apiUrl = typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_API_BASE_URL
-  return apiUrl || 'http://localhost:3001/api'
-}
-
-const API_BASE_URL = getApiBaseUrl()
+import { ADMIN_API_BASE_URL } from '@/lib/constants'
 
 export class ApiClient {
   private baseUrl: string
 
-  constructor(baseUrl: string = API_BASE_URL) {
+  constructor(baseUrl: string = ADMIN_API_BASE_URL) {
     this.baseUrl = baseUrl
   }
 
