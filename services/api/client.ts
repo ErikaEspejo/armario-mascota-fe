@@ -3,7 +3,7 @@
 
 const getApiBaseUrl = (): string => {
   // @ts-ignore - process is available in Node.js environment
-  const apiUrl = typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_API_URL
+  const apiUrl = typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_API_BASE_URL
   return apiUrl || 'http://localhost:3001/api'
 }
 

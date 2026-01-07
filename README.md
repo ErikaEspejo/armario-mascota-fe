@@ -71,8 +71,10 @@ El proyecto está preparado para conectar con un backend real. Para hacerlo:
 Crea un archivo `.env.local` en la raíz del proyecto:
 
 ```env
-NEXT_PUBLIC_API_URL=http://localhost:3001/api
+NEXT_PUBLIC_API_BASE_URL=http://localhost:3001/api
 ```
+
+**Nota**: Para desarrollo con Cloudflare Workers, usa `.dev.vars` en lugar de `.env.local`.
 
 ### 2. Reemplazar Servicios Mock
 
