@@ -160,7 +160,7 @@ export function SeparatedOrderDetailModal({
             <div className="border rounded-lg overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[600px]">
-                  <thead className="bg-green-900 text-white">
+                  <thead className="bg-primary text-primary-foreground">
                     <tr>
                       <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm font-semibold">Tipo de buso</th>
                       <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm font-semibold">Talla</th>
@@ -174,7 +174,7 @@ export function SeparatedOrderDetailModal({
                     {groupedItems.map((item, index) => (
                       <tr
                         key={`${item.tipoBuso}-${item.talla}-${index}`}
-                        className={index % 2 === 0 ? 'bg-amber-50' : 'bg-white'}
+                        className={index % 2 === 0 ? 'bg-card' : 'bg-muted/50'}
                       >
                         <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm">{item.tipoBuso}</td>
                         <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm">{item.talla}</td>
@@ -195,7 +195,7 @@ export function SeparatedOrderDetailModal({
                       </tr>
                     ))}
                     {/* Fila de totales */}
-                    <tr className="bg-green-50 font-bold">
+                    <tr className="bg-muted font-bold">
                       <td colSpan={2} className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm">
                         Total*
                       </td>

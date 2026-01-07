@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 import { AppProvider } from '@/context/AppContext'
 import { CartProvider } from '@/context/CartContext'
+import { ThemeProvider } from '@/context/ThemeContext'
 import { Toaster } from 'sonner'
 
 export const metadata: Metadata = {
@@ -35,8 +36,22 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="es">
+    <html lang="es" suppressHydrationWarning>
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                const theme = localStorage.getItem('theme');
+                const systemPreference = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                const initialTheme = theme || systemPreference;
+                if (initialTheme === 'dark') {
+                  document.documentElement.classList.add('dark');
+                }
+              })();
+            `,
+          }}
+        />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="format-detection" content="telephone=no" />
@@ -47,12 +62,14 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/assets/logo.png" />
       </head>
       <body className="font-sans">
-        <AppProvider>
-          <CartProvider>
-            {children}
-            <Toaster position="top-center" />
-          </CartProvider>
-        </AppProvider>
+        <ThemeProvider>
+          <AppProvider>
+            <CartProvider>
+              {children}
+              <Toaster position="top-center" />
+            </CartProvider>
+          </AppProvider>
+        </ThemeProvider>
       </body>
     </html>
   )

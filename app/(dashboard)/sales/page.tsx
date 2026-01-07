@@ -135,7 +135,7 @@ export default function SalesPage() {
             <CardContent className="p-0">
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-muted">
+                  <thead className="bg-primary text-primary-foreground">
                     <tr>
                       <th className="px-4 py-3 text-left text-sm font-semibold">Fecha</th>
                       <th className="px-4 py-3 text-left text-sm font-semibold">Cliente</th>
@@ -149,7 +149,7 @@ export default function SalesPage() {
                     {sales.map((sale, index) => (
                       <tr
                         key={sale.id}
-                        className={index % 2 === 0 ? 'bg-white' : 'bg-muted/50'}
+                        className={index % 2 === 0 ? 'bg-card' : 'bg-muted/50'}
                       >
                         <td className="px-4 py-3 text-sm">{formatSaleDate(sale.soldAt)}</td>
                         <td className="px-4 py-3 text-sm font-medium">{sale.customerName}</td>
@@ -196,6 +196,7 @@ export default function SalesPage() {
     </div>
   )
 }
+
 
 
 

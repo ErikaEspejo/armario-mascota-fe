@@ -80,7 +80,7 @@ export function TransactionsTable({
               {transactions.map((transaction, index) => (
                 <tr
                   key={transaction.id}
-                  className={index % 2 === 0 ? 'bg-white' : 'bg-muted/50'}
+                  className={index % 2 === 0 ? 'bg-card' : 'bg-muted/50'}
                 >
                   <td className="px-4 py-3 text-sm">
                     {formatDate(transaction.occurredAt)}
