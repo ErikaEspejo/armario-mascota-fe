@@ -41,20 +41,37 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Obtener el blob de la respuesta
-    const blob = await response.blob()
+    // Obtener el Content-Type del backend
+    const contentType = response.headers.get('Content-Type') || ''
     
-    // Obtener el Content-Type del backend o determinar según el formato
-    const contentType = response.headers.get('Content-Type') || 
+    // Si el formato es PNG y la respuesta es JSON, retornar el JSON directamente
+    if (format.toLowerCase() === 'png' && contentType.includes('application/json')) {
+      const jsonData = await response.json()
+      console.log('✅ [API Route] PNG catalog returned as JSON with pages:', jsonData.pages?.length || 0)
+      
+      return NextResponse.json(jsonData, {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type',
+        },
+      })
+    }
+
+    // Para PDF o PNG legacy (blob), mantener comportamiento actual
+    const blob = await response.blob()
+    const finalContentType = contentType || 
       (format.toLowerCase() === 'png' ? 'image/png' : 'application/pdf')
     
-    console.log('✅ [API Route] Successfully downloaded catalog')
+    console.log('✅ [API Route] Successfully downloaded catalog as blob')
     
     // Retornar el blob con los headers apropiados
     return new NextResponse(blob, {
       status: 200,
       headers: {
-        'Content-Type': contentType,
+        'Content-Type': finalContentType,
         'Content-Disposition': `attachment; filename="catalogo-${size}-${Date.now()}.${format.toLowerCase()}"`,
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, OPTIONS',

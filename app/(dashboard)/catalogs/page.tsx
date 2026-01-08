@@ -14,12 +14,26 @@ import {
 } from '@/components/ui/select'
 import { Download } from 'lucide-react'
 import { toast } from 'sonner'
+import JSZip from 'jszip'
 
 const SIZES = ['Mini', 'Intermedio', 'XS', 'S', 'M', 'L', 'XL'] as const
 const FORMATS = ['PNG', 'PDF'] as const
 
 type Size = typeof SIZES[number]
 type Format = typeof FORMATS[number]
+
+interface CatalogPage {
+  page: number
+  url: string
+  filename: string
+}
+
+interface CatalogPagesResponse {
+  pages: CatalogPage[]
+  sessionId: string
+  size: string
+  totalPages: number
+}
 
 /**
  * Mapea el nombre de talla al código usado por la API
@@ -71,27 +85,99 @@ export default function CatalogsPage() {
         throw new Error(errorData.error || `Error al descargar el catálogo: ${response.status} ${response.statusText}`)
       }
 
-      // Obtener el blob de la respuesta
-      const blob = await response.blob()
+      // Verificar si la respuesta es JSON (para PNG multi-página)
+      const contentType = response.headers.get('Content-Type') || ''
       
-      // Determinar la extensión según el formato
-      const extension = format === 'png' ? 'png' : 'pdf'
-      
-      // Crear URL temporal para el blob
-      const blobUrl = URL.createObjectURL(blob)
-      
-      // Crear un elemento <a> temporal para descargar
-      const link = document.createElement('a')
-      link.href = blobUrl
-      link.download = `catalogo-${selectedSize}-${Date.now()}.${extension}`
-      document.body.appendChild(link)
-      link.click()
-      
-      // Limpiar
-      document.body.removeChild(link)
-      URL.revokeObjectURL(blobUrl)
-      
-      toast.success(`Catálogo descargado exitosamente`)
+      if (format === 'png' && contentType.includes('application/json')) {
+        // Manejar respuesta JSON con múltiples páginas PNG
+        const data: CatalogPagesResponse = await response.json()
+        console.log('🔵 [Client] PNG catalog with pages:', data.pages.length)
+        
+        if (!data.pages || data.pages.length === 0) {
+          toast.error('No se encontraron páginas para descargar')
+          setIsDownloading(false)
+          return
+        }
+
+        // Crear instancia de JSZip
+        const zip = new JSZip()
+        
+        // Descargar cada página y agregarla al ZIP
+        toast.info(`Descargando ${data.pages.length} página(s)...`)
+        
+        for (const page of data.pages) {
+          try {
+            // Extraer parámetros de la URL del backend
+            // La URL viene como: /admin/catalog/png-page?session=L_1767890074203864500&page=1
+            const urlObj = new URL(page.url, 'http://dummy.com') // URL dummy solo para parsear
+            const session = urlObj.searchParams.get('session')
+            const pageNum = urlObj.searchParams.get('page')
+            
+            if (!session || !pageNum) {
+              throw new Error(`URL de página inválida: ${page.url}`)
+            }
+            
+            // Usar la API route de Next.js como proxy para evitar CORS
+            const pageUrl = `/api/catalog/png-page?session=${session}&page=${pageNum}`
+            console.log('🔵 [Client] Downloading page via API route:', pageUrl)
+            
+            const pageResponse = await fetch(pageUrl)
+            
+            if (!pageResponse.ok) {
+              const errorData = await pageResponse.json().catch(() => ({}))
+              throw new Error(errorData.error || `Error al descargar página ${page.page}: ${pageResponse.statusText}`)
+            }
+            
+            const pageBlob = await pageResponse.blob()
+            zip.file(page.filename, pageBlob)
+          } catch (error) {
+            console.error(`Error al descargar página ${page.page}:`, error)
+            toast.error(`Error al descargar página ${page.page}`)
+            throw error
+          }
+        }
+        
+        // Generar el archivo ZIP
+        const zipBlob = await zip.generateAsync({ type: 'blob' })
+        
+        // Crear URL temporal para el ZIP
+        const zipUrl = URL.createObjectURL(zipBlob)
+        
+        // Crear un elemento <a> temporal para descargar
+        const link = document.createElement('a')
+        link.href = zipUrl
+        link.download = `catalogo-${selectedSize}-${Date.now()}.zip`
+        document.body.appendChild(link)
+        link.click()
+        
+        // Limpiar
+        document.body.removeChild(link)
+        URL.revokeObjectURL(zipUrl)
+        
+        toast.success(`Catálogo descargado exitosamente (${data.pages.length} página(s))`)
+      } else {
+        // Para PDF o PNG legacy (blob), mantener comportamiento actual
+        const blob = await response.blob()
+        
+        // Determinar la extensión según el formato
+        const extension = format === 'png' ? 'png' : 'pdf'
+        
+        // Crear URL temporal para el blob
+        const blobUrl = URL.createObjectURL(blob)
+        
+        // Crear un elemento <a> temporal para descargar
+        const link = document.createElement('a')
+        link.href = blobUrl
+        link.download = `catalogo-${selectedSize}-${Date.now()}.${extension}`
+        document.body.appendChild(link)
+        link.click()
+        
+        // Limpiar
+        document.body.removeChild(link)
+        URL.revokeObjectURL(blobUrl)
+        
+        toast.success(`Catálogo descargado exitosamente`)
+      }
     } catch (error) {
       console.error('Error al descargar catálogo:', error)
       toast.error(error instanceof Error ? error.message : 'Error al descargar el catálogo')
