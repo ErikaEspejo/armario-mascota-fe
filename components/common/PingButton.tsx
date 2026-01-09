@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
-import { ADMIN_API_BASE_URL } from '@/lib/constants'
 import { Activity } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -23,10 +22,8 @@ export function PingButton({ className, variant = 'ghost', size = 'icon' }: Ping
     const timeoutId = setTimeout(() => controller.abort(), 5000) // 5 segundos de timeout
 
     try {
-      // Construir URL correctamente manejando slashes
-      const pingUrl = new URL('/ping', ADMIN_API_BASE_URL).toString()
-      
-      const response = await fetch(pingUrl, {
+      // Usar API route de Next.js como proxy para evitar problemas de CORS
+      const response = await fetch('/api/ping', {
         method: 'GET',
         cache: 'no-store',
         signal: controller.signal,
