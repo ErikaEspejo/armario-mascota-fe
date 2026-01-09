@@ -14,7 +14,6 @@ import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { LazyImage } from '@/components/common/LazyImage'
 import { BACKEND_BASE_URL } from '@/lib/constants'
 import { 
-  loadDesignAssets, 
   getPendingDesignAssets,
   saveDesignAsset, 
   filterDesignAssets,
@@ -69,10 +68,24 @@ export default function ProductsPage() {
     console.log('🟢 Botón "Cargar Imágenes" clickeado')
     
     try {
-      console.log('🟡 Llamando a loadDesignAssets...')
-      const data = await loadDesignAssets()
-      console.log('✅ loadDesignAssets completado exitosamente:', data)
-      toast.success('Imágenes cargadas exitosamente')
+      console.log('🟡 Llamando a /api/design-assets/load?stats=1 ...')
+      const response = await fetch('/api/design-assets/load?stats=1', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+        throw new Error(errorData.error || `Error loading design assets: ${response.status} ${response.statusText}`)
+      }
+
+      const data = (await response.json()) as { inserted?: number }
+      console.log('✅ loadDesignAssets(stats=1) completado exitosamente:', data)
+
+      const inserted = typeof data.inserted === 'number' ? data.inserted : 0
+      toast.success(`Imágenes cargadas exitosamente (insertadas: ${inserted})`)
     } catch (error) {
       console.error('🔴 Error en handleLoadImages:', error)
       let errorMessage = 'Error al cargar las imágenes'

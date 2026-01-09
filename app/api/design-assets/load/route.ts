@@ -1,11 +1,15 @@
 import { NextResponse } from 'next/server'
 import { ADMIN_API_BASE_URL } from '@/lib/constants'
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    console.log('🔵 [API Route] Proxying request to:', `${ADMIN_API_BASE_URL}/admin/design-assets/load`)
+    const { searchParams } = new URL(request.url)
+    const stats = searchParams.get('stats')
+    const backendUrl = `${ADMIN_API_BASE_URL}/admin/design-assets/load${stats ? `?stats=${encodeURIComponent(stats)}` : ''}`
+
+    console.log('🔵 [API Route] Proxying request to:', backendUrl)
     
-    const response = await fetch(`${ADMIN_API_BASE_URL}/admin/design-assets/load`, {
+    const response = await fetch(backendUrl, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
