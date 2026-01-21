@@ -4,6 +4,7 @@ import { AppProvider } from '@/context/AppContext'
 import { CartProvider } from '@/context/CartContext'
 import { ThemeProvider } from '@/context/ThemeContext'
 import { Toaster } from 'sonner'
+import { ChunkLoadRecovery } from '@/components/common/ChunkLoadRecovery'
 
 export const metadata: Metadata = {
   title: 'El Armario de mi Mascota',
@@ -65,6 +66,7 @@ export default function RootLayout({
         <ThemeProvider>
           <AppProvider>
             <CartProvider>
+              <ChunkLoadRecovery />
               {children}
               <Toaster position="top-center" />
             </CartProvider>
