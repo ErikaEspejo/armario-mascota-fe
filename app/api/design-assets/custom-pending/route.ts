@@ -1,28 +1,15 @@
 import { NextResponse } from 'next/server'
 import { ADMIN_API_BASE_URL } from '@/lib/constants'
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
-    const { searchParams } = new URL(request.url)
-    const stats = searchParams.get('stats')
-    const type = searchParams.get('type')
+    console.log('🔵 [API Route] Proxying request to:', `${ADMIN_API_BASE_URL}/admin/design-assets/custom-pending`)
     
-    // Construir query params para el backend
-    const backendParams = new URLSearchParams()
-    if (stats) backendParams.append('stats', stats)
-    if (type) backendParams.append('type', type)
-    
-    const queryString = backendParams.toString()
-    const backendUrl = `${ADMIN_API_BASE_URL}/admin/design-assets/load${queryString ? `?${queryString}` : ''}`
-
-    console.log('🔵 [API Route] Proxying request to:', backendUrl)
-    
-    const response = await fetch(backendUrl, {
+    const response = await fetch(`${ADMIN_API_BASE_URL}/admin/design-assets/custom-pending`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
       },
-      // No hay problemas de CORS desde el servidor
     })
 
     console.log('🔵 [API Route] Response status:', response.status)
@@ -31,13 +18,13 @@ export async function GET(request: Request) {
       const errorText = await response.text()
       console.error('🔴 [API Route] Error response:', errorText)
       return NextResponse.json(
-        { error: `Error loading design assets: ${response.statusText}`, details: errorText },
+        { error: `Error loading custom pending design assets: ${response.statusText}`, details: errorText },
         { status: response.status }
       )
     }
 
     const data = await response.json()
-    console.log('✅ [API Route] Successfully loaded design assets')
+    console.log('✅ [API Route] Successfully loaded custom pending design assets')
     
     return NextResponse.json(data, {
       status: 200,
@@ -50,13 +37,12 @@ export async function GET(request: Request) {
   } catch (error) {
     console.error('🔴 [API Route] Error:', error)
     return NextResponse.json(
-      { error: 'Error loading design assets', details: error instanceof Error ? error.message : 'Unknown error' },
+      { error: 'Error loading custom pending design assets', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )
   }
 }
 
-// Manejar preflight requests (OPTIONS)
 export async function OPTIONS() {
   return new NextResponse(null, {
     status: 200,
@@ -67,7 +53,4 @@ export async function OPTIONS() {
     },
   })
 }
-
-
-
 

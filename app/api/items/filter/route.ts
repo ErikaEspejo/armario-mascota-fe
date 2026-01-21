@@ -12,6 +12,7 @@ export async function GET(request: NextRequest) {
     if (searchParams.get('primaryColor')) backendParams.append('primaryColor', searchParams.get('primaryColor')!)
     if (searchParams.get('secondaryColor')) backendParams.append('secondaryColor', searchParams.get('secondaryColor')!)
     if (searchParams.get('hoodieType')) backendParams.append('hoodieType', searchParams.get('hoodieType')!)
+    if (searchParams.get('type')) backendParams.append('type', searchParams.get('type')!)
     
     const queryString = backendParams.toString()
     const backendUrl = queryString 

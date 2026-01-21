@@ -17,11 +17,17 @@ export interface DesignAsset {
 /**
  * Loads design assets from the admin endpoint via Next.js API route (proxy)
  * This avoids CORS issues by making the request from the server
+ * @param type Optional type parameter (e.g., 'customizable')
  * @returns Promise with the loaded design assets data
  */
-export async function loadDesignAssets(): Promise<unknown> {
+export async function loadDesignAssets(type?: string): Promise<unknown> {
   // Usar el API route de Next.js como proxy para evitar CORS
-  const url = '/api/design-assets/load'
+  const params = new URLSearchParams()
+  params.append('stats', '1')
+  if (type) params.append('type', type)
+  
+  const queryString = params.toString()
+  const url = `/api/design-assets/load?${queryString}`
   
   console.log('🔵 Iniciando carga de imágenes desde API route:', url)
   
@@ -61,6 +67,48 @@ export async function loadDesignAssets(): Promise<unknown> {
     }
     
     throw new Error('Error desconocido al cargar las imágenes')
+  }
+}
+
+/**
+ * Gets custom pending design assets from the admin endpoint via Next.js API route (proxy)
+ * @returns Promise with the custom pending design assets array
+ */
+export async function getCustomPendingDesignAssets(): Promise<DesignAsset[]> {
+  const url = '/api/design-assets/custom-pending'
+  
+  console.log('🔵 Obteniendo design assets personalizados pendientes desde API route:', url)
+  
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+      console.error('🔴 Error en respuesta:', errorData)
+      throw new Error(errorData.error || `Error loading custom pending design assets: ${response.status} ${response.statusText}`)
+    }
+
+    const data = await response.json()
+    console.log('✅ Design assets personalizados pendientes recibidos:', data)
+    // Si la respuesta es un array, retornarlo directamente, si es un objeto con un array, extraerlo
+    return Array.isArray(data) ? data : (data.items || data.data || [])
+  } catch (error) {
+    console.error('🔴 Error completo al obtener design assets personalizados pendientes:', error)
+    
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      throw new Error('No se pudo conectar con el servidor. Verifica que el servidor esté corriendo')
+    }
+    
+    if (error instanceof Error) {
+      throw error
+    }
+    
+    throw new Error('Error desconocido al obtener las decoraciones personalizadas pendientes')
   }
 }
 
@@ -117,6 +165,7 @@ export interface DesignAssetFilters {
   hoodieType?: string
   imageType?: string
   decoBase?: string
+  status?: string
 }
 
 export async function filterDesignAssets(filters: DesignAssetFilters): Promise<DesignAsset[]> {
@@ -133,6 +182,7 @@ export async function filterDesignAssets(filters: DesignAssetFilters): Promise<D
     if (filters.hoodieType) params.append('hoodieType', filters.hoodieType)
     if (filters.imageType) params.append('imageType', filters.imageType)
     if (filters.decoBase) params.append('decoBase', filters.decoBase)
+    if (filters.status) params.append('status', filters.status)
     
     const queryString = params.toString()
     const fullUrl = queryString ? `${url}?${queryString}` : url

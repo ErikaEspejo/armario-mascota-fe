@@ -1,12 +1,12 @@
 # El Armario de mi Mascota - Frontend PWA
 
-Sistema de inventario y ventas PWA (Progressive Web App) desarrollado con Next.js 14+, TypeScript, y shadcn/ui.
+Sistema de pedidos y ventas PWA (Progressive Web App) desarrollado con Next.js 14+, TypeScript, y shadcn/ui.
 
 ## Características
 
 - ✅ PWA completa (instalable en Android e iOS)
 - ✅ Diseño responsive (mobile y desktop)
-- ✅ Gestión de inventario con filtros y búsqueda
+- ✅ Crear pedidos con filtros y búsqueda de productos
 - ✅ Separación de pedidos con reservas
 - ✅ Proceso de venta completo
 - ✅ Historial de ventas
@@ -50,7 +50,7 @@ app/                    # Next.js App Router
 components/
   ui/                   # Componentes shadcn/ui
   layout/               # Componentes de layout
-  inventory/            # Componentes de inventario
+  inventory/            # Componentes para crear pedidos
   orders/               # Componentes de pedidos
   common/               # Componentes comunes
 context/                # Context providers (AppContext, CartContext)

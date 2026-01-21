@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils'
 
 const navItems = [
   { href: '/', label: 'Inicio', icon: Home },
-  { href: '/inventory', label: 'Inventario', icon: Package },
+  { href: '/inventory', label: 'Crear pedido', icon: Package },
   { href: '/separate', label: 'Pedidos', icon: ShoppingCart },
 ]
 

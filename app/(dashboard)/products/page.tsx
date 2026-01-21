@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Header } from '@/components/layout/Header'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -40,6 +41,7 @@ import { Upload, Image as ImageIcon, Settings, Save, CheckCircle2, Pencil } from
 import { toast } from 'sonner'
 
 export default function ProductsPage() {
+  const router = useRouter()
   const [loadingImages, setLoadingImages] = useState(false)
   const [editDecorationsOpen, setEditDecorationsOpen] = useState(false)
   const [editingAsset, setEditingAsset] = useState<DesignAsset | null>(null)
@@ -489,6 +491,14 @@ export default function ProductsPage() {
             >
               <Settings className="mr-2 h-3 w-3" />
               Editar Decoraciones
+            </Button>
+            <Button
+              onClick={() => router.push('/products/customizable')}
+              variant="outline"
+              size="sm"
+              className="w-full sm:w-auto"
+            >
+              Agregar productos personalizados
             </Button>
           </div>
         </div>

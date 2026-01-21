@@ -3,8 +3,8 @@
 import { useState, Suspense, useCallback, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Header } from '@/components/layout/Header'
-import { ProductGrid } from '@/components/inventory/ProductGrid'
-import { ProductFilters, FilterState } from '@/components/inventory/ProductFilters'
+import { CustomProductGrid } from '@/components/inventory/CustomProductGrid'
+import { CustomProductFilters, FilterState } from '@/components/inventory/CustomProductFilters'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { EmptyState } from '@/components/common/EmptyState'
 import { SelectCartModal } from '@/components/inventory/SelectCartModal'
@@ -12,7 +12,7 @@ import { FilteredItem } from '@/types'
 import { filterItems } from '@/services/api/items'
 import { addItemToReservedOrder } from '@/services/api/reserved-orders'
 import { toast } from 'sonner'
-import { Filter, ShoppingCart, Sparkles } from 'lucide-react'
+import { Filter, ShoppingCart, ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 const STORAGE_KEYS = {
@@ -20,20 +20,19 @@ const STORAGE_KEYS = {
   ACTIVE_RESERVED_ORDER_LABEL: 'activeReservedOrderLabel',
 }
 
-function CreateOrderPageContent() {
+function CustomProductsPageContent() {
   const router = useRouter()
   const [filteredItems, setFilteredItems] = useState<FilteredItem[]>([])
-  const [allItems, setAllItems] = useState<FilteredItem[]>([]) // Almacenar todos los items filtrados por API
+  const [allItems, setAllItems] = useState<FilteredItem[]>([])
   const [loading, setLoading] = useState(false)
   const [hasSearched, setHasSearched] = useState(false)
-  const [descriptionSearch, setDescriptionSearch] = useState('')
   const allItemsRef = useRef<FilteredItem[]>([])
-  
+
   // Reserved order state
   const [activeReservedOrderId, setActiveReservedOrderId] = useState<number | null>(null)
   const [activeReservedOrderLabel, setActiveReservedOrderLabel] = useState<string>('')
   const [selectCartModalOpen, setSelectCartModalOpen] = useState(false)
-  
+
   // Mantener allItemsRef actualizado
   useEffect(() => {
     allItemsRef.current = allItems
@@ -44,7 +43,7 @@ function CreateOrderPageContent() {
     if (typeof window !== 'undefined') {
       const storedId = localStorage.getItem(STORAGE_KEYS.ACTIVE_RESERVED_ORDER_ID)
       const storedLabel = localStorage.getItem(STORAGE_KEYS.ACTIVE_RESERVED_ORDER_LABEL)
-      
+
       if (storedId) {
         const orderId = parseInt(storedId, 10)
         if (!isNaN(orderId)) {
@@ -66,22 +65,46 @@ function CreateOrderPageContent() {
   }, [])
 
   // Handle cart selection
-  const handleSelectCart = useCallback((orderId: number, label: string) => {
-    saveActiveReservedOrder(orderId, label)
-    setSelectCartModalOpen(false)
-  }, [saveActiveReservedOrder])
+  const handleSelectCart = useCallback(
+    (orderId: number, label: string) => {
+      saveActiveReservedOrder(orderId, label)
+      setSelectCartModalOpen(false)
+    },
+    [saveActiveReservedOrder]
+  )
 
-  // Handle add to cart
-  const handleAddToCart = useCallback(async (orderId: number, itemId: number, qty: number) => {
-    try {
-      await addItemToReservedOrder(orderId, { itemId, qty })
-      toast.success('Producto agregado al carrito exitosamente')
-    } catch (error) {
-      console.error('Error adding item to cart:', error)
-      toast.error(error instanceof Error ? error.message : 'Error al agregar el producto al carrito')
-      throw error
-    }
-  }, [])
+  // Handle add to cart with custom fields
+  const handleAddToCart = useCallback(
+    async (
+      orderId: number,
+      itemId: number,
+      qty: number,
+      primaryColor?: string,
+      secondaryColor?: string,
+      hoodieType?: string
+    ) => {
+      try {
+        await addItemToReservedOrder(orderId, {
+          itemId,
+          qty,
+          primaryColor,
+          secondaryColor,
+          hoodieType,
+          type: 'custom',
+        })
+        toast.success('Producto agregado al carrito exitosamente')
+      } catch (error) {
+        console.error('Error adding item to cart:', error)
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : 'Error al agregar el producto al carrito'
+        )
+        throw error
+      }
+    },
+    []
+  )
 
   const handleFilterChange = async (filters: FilterState) => {
     setLoading(true)
@@ -89,13 +112,10 @@ function CreateOrderPageContent() {
     try {
       const result = await filterItems({
         size: filters.size,
-        primaryColor: filters.primaryColor,
-        secondaryColor: filters.secondaryColor,
-        hoodieType: filters.hoodieType,
+        type: 'custom',
       })
       setAllItems(result)
-      // Aplicar filtro de descripción si existe
-      applyDescriptionFilter(result, descriptionSearch)
+      setFilteredItems(result)
     } catch (error) {
       console.error('Error filtering items:', error)
       toast.error('Error al filtrar productos. Intenta nuevamente.')
@@ -106,64 +126,10 @@ function CreateOrderPageContent() {
     }
   }
 
-  const applyDescriptionFilter = useCallback((items: FilteredItem[], searchText: string) => {
-    let filtered = items
-    
-    if (searchText.trim()) {
-      const lowerSearch = searchText.toLowerCase().trim()
-      filtered = items.filter(item =>
-        item.description?.toLowerCase().includes(lowerSearch) ||
-        item.sku?.toLowerCase().includes(lowerSearch)
-      )
-    }
-
-    // Ordenar por talla según el orden especificado
-    const sizeOrder: Record<string, number> = {
-      'MN': 1,
-      'IT': 2,
-      'XS': 3,
-      'S': 4,
-      'M': 5,
-      'L': 6,
-    }
-
-    const sortedItems = [...filtered].sort((a, b) => {
-      const orderA = sizeOrder[a.size] ?? 999
-      const orderB = sizeOrder[b.size] ?? 999
-
-      // Si ambas tallas están en el orden definido, ordenar por ese orden
-      if (orderA !== 999 && orderB !== 999) {
-        return orderA - orderB
-      }
-
-      // Si solo una está en el orden definido, esa va primero
-      if (orderA !== 999) return -1
-      if (orderB !== 999) return 1
-
-      // Si ninguna está en el orden definido, ordenar alfabéticamente
-      return a.size.localeCompare(b.size)
-    })
-
-    setFilteredItems(sortedItems)
-  }, [])
-
-  const handleDescriptionSearch = useCallback((searchText: string) => {
-    setDescriptionSearch(searchText)
-    // Si ya hay items cargados, filtrar localmente usando la referencia
-    if (allItemsRef.current.length > 0) {
-      applyDescriptionFilter(allItemsRef.current, searchText)
-    }
-    // Si hay texto de búsqueda pero no hay items, marcar como buscado
-    if (searchText.trim()) {
-      setHasSearched(true)
-    }
-  }, [applyDescriptionFilter])
-
-
   if (loading) {
     return (
       <div>
-        <Header title="Crear pedido" />
+        <Header title="Productos personalizados" />
         <div className="flex justify-center items-center min-h-[400px]">
           <LoadingSpinner size="lg" />
         </div>
@@ -173,13 +139,37 @@ function CreateOrderPageContent() {
 
   return (
     <div>
-      <Header title="Crear pedido" />
+      <Header title="Productos personalizados" />
       <div className="space-y-6">
         <div className="hidden md:block">
-          <h1 className="text-3xl font-bold mb-2">Crear pedido</h1>
+          <div className="flex items-center gap-4 mb-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push('/inventory')}
+              className="gap-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Volver a todos los productos
+            </Button>
+          </div>
+          <h1 className="text-3xl font-bold mb-2">Productos personalizados</h1>
           <p className="text-muted-foreground mb-6">
-            Selecciona productos y agrégalos a tu pedido
+            Selecciona productos y personaliza colores y tipo de buso
           </p>
+        </div>
+
+        {/* Mobile back button */}
+        <div className="md:hidden">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => router.push('/inventory')}
+            className="gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Volver
+          </Button>
         </div>
 
         {/* Cart selection and active cart indicator */}
@@ -189,12 +179,12 @@ function CreateOrderPageContent() {
               <div className="flex items-center gap-2">
                 <ShoppingCart className="h-5 w-5 text-primary" />
                 <span className="font-semibold">Carrito activo:</span>
-                <span className="text-primary">{activeReservedOrderLabel || `#${activeReservedOrderId}`}</span>
+                <span className="text-primary">
+                  {activeReservedOrderLabel || `#${activeReservedOrderId}`}
+                </span>
               </div>
             ) : (
-              <div className="text-muted-foreground">
-                No hay carrito activo
-              </div>
+              <div className="text-muted-foreground">No hay carrito activo</div>
             )}
           </div>
           <Button
@@ -206,32 +196,16 @@ function CreateOrderPageContent() {
           </Button>
         </div>
 
-        {/* Button to add custom products */}
-        <div className="flex justify-end">
-          <Button
-            onClick={() => router.push('/inventory/custom')}
-            variant="outline"
-            size="sm"
-            className="gap-2"
-          >
-            <Sparkles className="h-4 w-4" />
-            Agregar productos personalizados
-          </Button>
-        </div>
-
-        <ProductFilters 
-          onFilterChange={handleFilterChange}
-          onDescriptionSearch={handleDescriptionSearch}
-        />
+        <CustomProductFilters onFilterChange={handleFilterChange} />
 
         {!hasSearched ? (
           <EmptyState
             icon={Filter}
             title="Se requiere al menos un filtro para mostrar resultados"
-            description="Selecciona al menos un filtro y haz clic en 'Filtrar' para ver los productos disponibles"
+            description="Selecciona una talla y haz clic en 'Filtrar' para ver los productos disponibles"
           />
         ) : (
-          <ProductGrid
+          <CustomProductGrid
             items={filteredItems}
             activeReservedOrderId={activeReservedOrderId}
             onAddToCart={handleAddToCart}
@@ -249,17 +223,19 @@ function CreateOrderPageContent() {
   )
 }
 
-export default function InventoryPage() {
+export default function CustomProductsPage() {
   return (
-    <Suspense fallback={
-      <div>
-        <Header title="Crear pedido" />
-        <div className="flex justify-center items-center min-h-[400px]">
-          <LoadingSpinner size="lg" />
+    <Suspense
+      fallback={
+        <div>
+          <Header title="Productos personalizados" />
+          <div className="flex justify-center items-center min-h-[400px]">
+            <LoadingSpinner size="lg" />
+          </div>
         </div>
-      </div>
-    }>
-      <CreateOrderPageContent />
+      }
+    >
+      <CustomProductsPageContent />
     </Suspense>
   )
 }

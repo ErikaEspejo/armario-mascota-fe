@@ -14,6 +14,7 @@ export async function GET(request: NextRequest) {
     if (searchParams.get('hoodieType')) backendParams.append('hoodieType', searchParams.get('hoodieType')!)
     if (searchParams.get('imageType')) backendParams.append('imageType', searchParams.get('imageType')!)
     if (searchParams.get('decoBase')) backendParams.append('decoBase', searchParams.get('decoBase')!)
+    if (searchParams.get('status')) backendParams.append('status', searchParams.get('status')!)
     
     const queryString = backendParams.toString()
     const backendUrl = queryString 

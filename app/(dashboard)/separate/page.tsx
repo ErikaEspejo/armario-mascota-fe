@@ -11,7 +11,7 @@ import { EmptyState } from '@/components/common/EmptyState'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { ReservedOrder, ReservedOrderItem } from '@/types'
-import { getSeparatedOrders, cancelReservedOrder } from '@/services/api/reserved-orders'
+import { getSeparatedOrders, cancelReservedOrder, getReservedOrderById } from '@/services/api/reserved-orders'
 import { toast } from 'sonner'
 import { ShoppingBag, ArrowUpDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -132,9 +132,22 @@ export default function SeparateOrderPage() {
     }
   }
 
-  const handleViewDetail = (order: ReservedOrder) => {
-    setSelectedOrder(order)
-    setDetailModalOpen(true)
+  const handleViewDetail = async (order: ReservedOrder) => {
+    // Si el order ya tiene lines, mostrarlas
+    if (order.lines && order.lines.length > 0) {
+      setSelectedOrder(order)
+      setDetailModalOpen(true)
+    } else {
+      // Si no tiene lines, cargar el pedido completo
+      try {
+        const fullOrder = await getReservedOrderById(order.id)
+        setSelectedOrder(fullOrder)
+        setDetailModalOpen(true)
+      } catch (error) {
+        console.error('Error al cargar pedido:', error)
+        toast.error('Error al cargar los detalles del pedido')
+      }
+    }
   }
 
   const handleViewBusos = (item: ReservedOrderItem) => {

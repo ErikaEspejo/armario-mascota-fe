@@ -7,7 +7,7 @@ import { Toaster } from 'sonner'
 
 export const metadata: Metadata = {
   title: 'El Armario de mi Mascota',
-  description: 'Sistema de inventario y ventas',
+  description: 'Sistema de pedidos y ventas',
   manifest: '/manifest.json',
   themeColor: '#3b82f6',
   appleWebApp: {

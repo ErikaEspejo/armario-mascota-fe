@@ -84,6 +84,8 @@ export interface Buso {
   id: number
   imageUrl: string
   qty: number
+  colorPrimary?: string
+  hasCustomCode?: boolean
 }
 
 export interface ReservedOrderLineItem {
@@ -99,6 +101,8 @@ export interface ReservedOrderLineItem {
   colorSecondary: string
   hoodieType: string
   hoodieTypeLabel?: string
+  colorPrimaryLabel?: string
+  colorSecondaryLabel?: string
   imageType: string
   decoId: string
   decoBase: string
@@ -113,6 +117,7 @@ export interface ReservedOrderLine {
   qty: number
   unitPrice: number
   createdAt: string
+  customCode?: string
   item: ReservedOrderLineItem
 }
 
@@ -123,6 +128,8 @@ export interface ReservedOrderItem {
   cantidad: number
   precioTotal: number
   busos: Buso[]
+  colorPrimary?: string
+  hasCustomCode?: boolean
 }
 
 export interface ReservedOrder {
@@ -152,6 +159,10 @@ export interface CreateReservedOrderPayload {
 export interface AddItemToReservedOrderPayload {
   itemId: number
   qty: number
+  primaryColor?: string
+  secondaryColor?: string
+  hoodieType?: string
+  type?: 'custom'
 }
 
 export interface ReservedOrdersResponse {

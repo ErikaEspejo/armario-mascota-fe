@@ -58,6 +58,11 @@ export function BusosBySizeModal({
                   <p className="text-[10px] sm:text-xs text-center text-muted-foreground font-medium">
                     ID: {buso.id}
                   </p>
+                  {buso.colorPrimary && (
+                    <p className="text-[10px] sm:text-xs text-center text-primary font-semibold mt-1 uppercase">
+                      {buso.colorPrimary}
+                    </p>
+                  )}
                 </div>
               ))}
             </div>

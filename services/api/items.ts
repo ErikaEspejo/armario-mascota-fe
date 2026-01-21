@@ -5,10 +5,11 @@ export interface FilterParams {
   primaryColor?: string
   secondaryColor?: string
   hoodieType?: string
+  type?: string
 }
 
 /**
- * Filtra items del inventario usando el endpoint de filtrado via Next.js API route (proxy)
+ * Filtra items para crear pedidos usando el endpoint de filtrado via Next.js API route (proxy)
  * Esto evita problemas de CORS haciendo la petición desde el servidor
  */
 export async function filterItems(params: FilterParams): Promise<FilteredItem[]> {
@@ -24,6 +25,7 @@ export async function filterItems(params: FilterParams): Promise<FilteredItem[]>
     if (params.primaryColor) queryParams.append('primaryColor', params.primaryColor)
     if (params.secondaryColor) queryParams.append('secondaryColor', params.secondaryColor)
     if (params.hoodieType) queryParams.append('hoodieType', params.hoodieType)
+    if (params.type) queryParams.append('type', params.type)
     
     const queryString = queryParams.toString()
     const fullUrl = queryString ? `${url}?${queryString}` : url

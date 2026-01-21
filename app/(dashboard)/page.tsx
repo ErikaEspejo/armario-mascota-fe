@@ -24,8 +24,8 @@ export default function HomePage() {
       color: 'bg-indigo-500',
     },
     {
-      title: 'Inventario',
-      description: 'Ver productos disponibles',
+      title: 'Crear pedido',
+      description: 'Crear pedidos y agregar productos',
       icon: Package,
       href: '/inventory',
       color: 'bg-teal-500',

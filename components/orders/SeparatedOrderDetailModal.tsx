@@ -72,6 +72,9 @@ function groupLinesByTypeAndSize(lines: ReservedOrderLine[]): ReservedOrderItem[
     const tallaCode = line.item.size
     const talla = getTallaName(tallaCode)
     const key = `${tipoBuso}-${tallaCode}` // Usar código para agrupar, pero mostrar nombre
+    const hasCustomCode = !!line.customCode
+    // Usar colorPrimaryLabel si está disponible, sino usar colorPrimary
+    const colorPrimary = line.item.colorPrimaryLabel || line.item.colorPrimary
 
     if (grouped.has(key)) {
       const existing = grouped.get(key)!
@@ -81,7 +84,14 @@ function groupLinesByTypeAndSize(lines: ReservedOrderLine[]): ReservedOrderItem[
         id: line.item.id,
         imageUrl: getImageUrl(line.item.imageUrlThumb),
         qty: line.qty,
+        colorPrimary: colorPrimary || undefined,
+        hasCustomCode,
       })
+      // Si esta línea tiene customCode y no hay colorPrimary guardado, guardarlo
+      if (hasCustomCode && colorPrimary && !existing.colorPrimary) {
+        existing.colorPrimary = colorPrimary
+        existing.hasCustomCode = true
+      }
     } else {
       grouped.set(key, {
         tipoBuso,
@@ -93,7 +103,11 @@ function groupLinesByTypeAndSize(lines: ReservedOrderLine[]): ReservedOrderItem[
           id: line.item.id,
           imageUrl: getImageUrl(line.item.imageUrlThumb),
           qty: line.qty,
+          colorPrimary: colorPrimary || undefined,
+          hasCustomCode,
         }],
+        colorPrimary: hasCustomCode ? colorPrimary : undefined,
+        hasCustomCode,
       })
     }
   })

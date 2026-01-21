@@ -168,6 +168,10 @@ export function EditReservedOrderModal({
                   const editedLine = lines.find(l => l.id === line.id)
                   const currentQty = editedLine?.qty ?? line.qty
                   
+                  const hasCustomCode = !!line.customCode
+                  const colorPrimary = line.item?.colorPrimaryLabel || line.item?.colorPrimary
+                  const hoodieType = line.item?.hoodieTypeLabel || line.item?.hoodieType
+                  
                   return (
                     <div key={line.id} className="p-4 flex items-center justify-between">
                       <div className="flex-1">
@@ -176,7 +180,13 @@ export function EditReservedOrderModal({
                         </p>
                         <p className="text-xs text-muted-foreground">
                           SKU: {line.item?.sku || 'N/A'} | Talla: {line.item?.size || 'N/A'}
+                          {hoodieType && ` | Tipo: ${hoodieType}`}
                         </p>
+                        {hasCustomCode && colorPrimary && (
+                          <p className="text-xs text-primary font-medium">
+                            Color Principal: {colorPrimary}
+                          </p>
+                        )}
                         <p className="text-xs text-muted-foreground">
                           Precio unitario: ${line.unitPrice?.toLocaleString() || '0'}
                         </p>

@@ -1,7 +1,7 @@
 {
   "name": "El Armario de mi Mascota",
   "short_name": "Armario Mascota",
-  "description": "Sistema de inventario y ventas para El Armario de mi Mascota",
+  "description": "Sistema de pedidos y ventas para El Armario de mi Mascota",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
