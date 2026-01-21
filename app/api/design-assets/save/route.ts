@@ -10,7 +10,7 @@ export async function POST(request: Request) {
     console.log('🔵 [API Route] Request body:', body)
     
     const response = await fetch(`${ADMIN_API_BASE_URL}${SAVE_DESIGN_ASSET_ENDPOINT}`, {
-      method: 'POST',
+      method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
       },
